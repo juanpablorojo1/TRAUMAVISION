@@ -10,22 +10,8 @@ Proyecto Integrador de Ingeniería Biomédica (UNC) — Juan Pablo Rojo.
 - `datos/` — GRAZPEDWRI-DX (entrenamiento y test interno) y PediURF (test externo).
 - `venv/` — entorno de Python.
 
-## Instalación
 
-```
-python -m venv venv
-venv\Scripts\python.exe -m pip install -r requirements.txt
-```
 
-Los pesos del modelo están en la release `v1r`. Hay que bajar `best.pt` y copiarlo en `modelo/v1r/weights/`.
-
-Para usar el botón **Enviar por mail** de la página, copiá `pagina/.env.example` como `pagina/.env` y completá `SMTP_EMAIL` y `SMTP_PASSWORD` (con Gmail, una contraseña de aplicación). Sin eso, la página anda igual y el botón aparece desactivado.
-
-Todos los scripts de `modelo/` y `datos/` se corren desde esta carpeta:
-
-```
-venv\Scripts\python.exe modelo\test_interno.py
-```
 
 ## Orden de los scripts
 
