@@ -7,7 +7,6 @@ analysis_routes.py — Análisis de radiografías.
   GET  /analysis/history             historial del usuario
   GET  /analysis/{id}/results        resultado guardado
   GET  /analysis/{id}/pdf            informe en PDF
-  POST /analysis/{id}/email          manda el informe PDF por mail
   GET  /analysis/study/{id}          resultado de un estudio
   GET  /analysis/imagen/{archivo}    sirve una imagen, previa verificación
 
@@ -22,7 +21,7 @@ from io import BytesIO
 import cv2
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, StreamingResponse
-from PIL import Image, ImageDraw, UnidentifiedImageError
+from PIL import Image, ImageDraw
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile as StarletteUploadFile
@@ -33,8 +32,6 @@ from app.database.models import Analysis, User
 from app.dependencies.auth import require_user
 from app.dependencies.csrf import get_csrf_token, verify_csrf
 from app.plantillas import crear_templates
-from app.services.email_service import enviar_informe
-from app.services.rate_limit import check_and_consume
 from app.services.routing_service import (
     calculate_urgency,
     imagen_mas_urgente,
@@ -46,8 +43,6 @@ from config.settings import (
     APP_NAME,
     CONFIDENCE_THRESHOLD,
     DEFAULT_REGION,
-    EMAIL_HABILITADO,
-    EMAIL_POR_HORA,
     LEGAL_DISCLAIMER,
     MAX_UPLOAD_SIZE_MB,
     MAX_ZIP_SIZE_MB,
@@ -70,13 +65,6 @@ HISTORIAL_MAX_FILAS = 500
 _ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/bmp", "image/tiff", "application/dicom"}
 _TIPOS_ZIP = ("application/zip", "application/x-zip-compressed")
 _SAFE_FILENAME_RE = re.compile(r"^[A-Za-z0-9_\-]+\.(png|jpg|jpeg)$")
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
-_MENSAJES_MAIL = {
-    "enviado": "Informe enviado por mail.",
-    "invalido": "La dirección de mail no es válida.",
-    "limite": "Llegaste al límite de envíos por hora. Probá más tarde.",
-    "error": "No se pudo enviar el mail. Revisá la configuración SMTP en el archivo .env.",
-}
 
 # Color de las cajas en el PDF de un análisis de un modelo anterior (violeta KIBBO 200).
 _CAJA_NEUTRA = "#CFC4F1"
@@ -193,7 +181,7 @@ async def analyze_image(
     """Analiza una radiografía y redirige a su resultado."""
     file, region = await _archivo_del_formulario(request)
     if file is None:
-        return _upload_error(request, user, "No se recibió ningún archivo. Elegí una radiografía para analizar.")
+        return _upload_error(request, user, "No se recibió ningún archivo. Seleccione una radiografía para analizar.")
 
     is_dicom = (file.filename or "").lower().endswith(".dcm") or file.content_type == "application/dicom"
     if file.content_type not in _ALLOWED_IMAGE_TYPES and not is_dicom:
@@ -216,12 +204,13 @@ async def analyze_image(
             from src.preprocessing.transforms import load_dicom
             image = load_dicom(contents)
         else:
-            image = Image.open(BytesIO(contents))
-            image.load()
-    except UnidentifiedImageError:
-        return _upload_error(request, user, "No se pudo leer la imagen: el archivo no es una imagen válida o está dañado.")
+            # Como en el entrenamiento: OpenCV en gris (16 bits se reescala, no se recorta).
+            from src.preprocessing.transforms import load_image
+            image = load_image(contents)
     except Exception as exc:
         return _upload_error(request, user, f"No se pudo procesar el archivo: {exc}")
+    if image is None:
+        return _upload_error(request, user, "No se pudo leer la imagen: el archivo no es una imagen válida o está dañado.")
 
     try:
         detector = _cargar_detector(region_key)
@@ -317,7 +306,6 @@ async def serve_image(
 async def view_analysis(
     analysis_id: int,
     request: Request,
-    mail: str | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(require_user),
 ):
@@ -353,14 +341,11 @@ async def view_analysis(
             "model_version": analysis.model_version,
             "modelo_anterior": _modelo_anterior(analysis.anatomical_region, analysis.model_version),
             "feedback": crud.get_feedback_by_analysis(db, analysis.id),
-            "email_habilitado": EMAIL_HABILITADO,
-            "mail_estado": mail if mail in _MENSAJES_MAIL else None,
-            "mail_mensaje": _MENSAJES_MAIL.get(mail),
         },
     )
 
 
-# ─── PDF y mail ──────────────────────────────────────────────────────────────
+# ─── PDF ─────────────────────────────────────────────────────────────────────
 
 def _anotada_neutra(original: Image.Image, cajas) -> Image.Image:
     """La placa original con las cajas guardadas, todas en el color neutro."""
@@ -381,7 +366,7 @@ def _imagen_anotada(analysis) -> Image.Image:
 
 
 def _pdf_del_analisis(analysis, user: User) -> bytes:
-    """El informe PDF, el mismo para descargar y para mandar por mail."""
+    """El informe PDF del análisis."""
     from src.reports.generator import generate_pdf_report
 
     return generate_pdf_report(
@@ -412,32 +397,6 @@ async def download_pdf(
     )
 
 
-@router.post("/{analysis_id}/email")
-async def send_email(
-    request: Request,
-    analysis_id: int,
-    db: Session = Depends(get_db),
-    user: User = Depends(require_user),
-    _: None = Depends(verify_csrf),
-):
-    analysis = crud.get_analysis_for_user(db, analysis_id, user.id)
-    if not analysis:
-        raise HTTPException(status_code=404, detail="Análisis no encontrado.")
-
-    destino = ((await request.form()).get("destino") or "").strip()
-    volver = f"/analysis/{analysis_id}/results?mail="
-    if not _EMAIL_RE.match(destino):
-        return RedirectResponse(url=volver + "invalido", status_code=303)
-    if not EMAIL_HABILITADO:
-        return RedirectResponse(url=volver + "error", status_code=303)
-    if not check_and_consume(f"email:{user.id}", EMAIL_POR_HORA):
-        return RedirectResponse(url=volver + "limite", status_code=303)
-
-    pdf = await run_in_threadpool(_pdf_del_analisis, analysis, user)
-    enviado = await run_in_threadpool(enviar_informe, destino, analysis.id, user.name, pdf)
-    return RedirectResponse(url=volver + ("enviado" if enviado else "error"), status_code=303)
-
-
 # ─── Estudios de varias imágenes ─────────────────────────────────────────────
 
 @router.post("/upload-study")
@@ -450,11 +409,11 @@ async def analyze_study(
     """Analiza un ZIP con varios DICOM y redirige al resultado del estudio."""
     file, region = await _archivo_del_formulario(request)
     if file is None:
-        return _upload_error(request, user, "No se recibió ningún archivo. Subí un ZIP con los DICOM del estudio.")
+        return _upload_error(request, user, "No se recibió ningún archivo. Cargue un archivo ZIP con los DICOM del estudio.")
 
     is_zip = (file.filename or "").lower().endswith(".zip") or file.content_type in _TIPOS_ZIP
     if not is_zip:
-        return _upload_error(request, user, "Para estudios multi-imagen, subí un archivo ZIP con los DICOM.")
+        return _upload_error(request, user, "Para estudios de varias imágenes, cargue un archivo ZIP con los DICOM.")
 
     contents = await file.read()
     if len(contents) > MAX_ZIP_SIZE_MB * 1024 * 1024:
@@ -503,7 +462,10 @@ async def analyze_study(
 
         if result.is_abnormal:
             con_hallazgos += 1
-        veredicto = "Hallazgos detectados" if result.is_abnormal else "Sin hallazgos sobre el umbral"
+        veredicto = (
+            "Con hallazgos sobre el umbral de clasificación" if result.is_abnormal
+            else "Sin hallazgos sobre el umbral de clasificación"
+        )
 
         analysis = crud.create_analysis(
             db=db,

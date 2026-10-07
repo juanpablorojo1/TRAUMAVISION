@@ -51,7 +51,7 @@
     {{ m.icon('alert') }}
     <div>
       <strong>Estudio fuera del dominio validado.</strong>
-      Procesado con un modelo retirado. No se informa prioridad clínica.
+      Procesado con un modelo retirado del sistema. No se informa prioridad clínica.
     </div>
   </div>
 </div>
@@ -61,7 +61,7 @@
     {{ m.icon('alert') }}
     <div>
       <strong>Modelo anterior.</strong>
-      Análisis hecho con un modelo anterior (<code>{{ model_version or 'sin registrar' }}</code>),
+      Análisis realizado con un modelo anterior (<code>{{ model_version or 'sin registrar' }}</code>),
       que ya no está en uso. No se informa prioridad clínica.
     </div>
   </div>
@@ -90,7 +90,7 @@
     {% endfor %}
 
     <div class="viewport" data-viewport tabindex="0"
-         aria-label="Imagen del estudio {{ study_id }}. Flechas para desplazar, más y menos para el zoom.">
+         aria-label="Imagen del estudio {{ study_id }}. Utilice las flechas para desplazar la imagen y las teclas más y menos para el zoom.">
       <img class="stage-img stage-img-base" data-stage-base aria-hidden="true" alt=""
            src="/analysis/imagen/{{ first.original_image }}">
       <img class="stage-img stage-img-top" data-stage-img
@@ -184,11 +184,11 @@
 
       <div class="finds">
         <div class="find-head">
-          <h2 class="finds-title">Zonas marcadas</h2>
+          <h2 class="finds-title">Cajas delimitadoras</h2>
           {% if not sin_prioridad %}
           <span class="find-count"><span class="num">{{ r.significant_count }}</span> sobre el {{ m.corte_nombre() }}</span>
           {% else %}
-          <span class="find-count"><span class="num">{{ r.boxes|length }}</span> {{ 'zona' if r.boxes|length == 1 else 'zonas' }}</span>
+          <span class="find-count"><span class="num">{{ r.boxes|length }}</span> {{ 'caja' if r.boxes|length == 1 else 'cajas' }}</span>
           {% endif %}
         </div>
         {{ m.find_unit(corte) }}
@@ -217,10 +217,10 @@
             <dt>Archivo</dt><dd style="word-break:break-all;">{{ r.source_filename }}</dd>
             {% if not sin_prioridad %}
             <dt>Sobre el {{ m.corte_nombre() }}</dt><dd>{{ r.significant_count }}</dd>
-            <dt>Baja confianza</dt><dd>{{ r.low_confidence_count }}</dd>
+            <dt>Bajo el {{ m.corte_nombre() }}</dt><dd>{{ r.low_confidence_count }}</dd>
             {% endif %}
-            <dt>Score crudo máx.</dt><dd>{{ m.conf_display(r.max_detection_confidence, r.significant_count) }}</dd>
-            <dt>Inferencia</dt><dd>{{ "%.0f"|format(r.inference_time_ms) }} ms</dd>
+            <dt>Puntaje máximo del detector</dt><dd>{{ m.conf_display(r.max_detection_confidence, r.significant_count) }}</dd>
+            <dt>Tiempo de inferencia</dt><dd>{{ "%.0f"|format(r.inference_time_ms) }} ms</dd>
           </dl>
           {% if r.analysis_id %}
           <div class="actions-bar" style="margin-top:var(--s-4);">
@@ -286,7 +286,7 @@
       if (visibles === 0) {
         msg.hidden = false;
         msg.textContent = tipo === 'finding'
-          ? 'Ninguna imagen de este estudio superó el umbral de anormalidad.'
+          ? 'Ninguna imagen de este estudio alcanzó el umbral de clasificación.'
           : 'Todas las imágenes de este estudio tienen hallazgos.';
       } else {
         msg.hidden = true;

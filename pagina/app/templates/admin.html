@@ -7,7 +7,7 @@
 <div class="page-header">
   <div>
     <h1>Administración</h1>
-    <p class="page-header-sub">Vista global del sistema — la única pantalla que cruza datos de todas las cuentas</p>
+    <p class="page-header-sub">Vista global del sistema: única pantalla que integra datos de todas las cuentas</p>
   </div>
   <div class="page-header-actions">
     <a href="/admin/export/analisis.csv" class="btn btn-sm btn-secondary">Exportar análisis (CSV)</a>
@@ -18,12 +18,12 @@
 <section class="metrics-section">
   <div class="metrics-head">
     <span class="eyebrow">Sistema completo</span>
-    <span class="metrics-head-note">cruza datos de todas las cuentas · solo el modelo vigente (<code>{{ modelo_vigente }}</code>)</span>
+    <span class="metrics-head-note">datos de todas las cuentas · solo el modelo vigente (<code>{{ modelo_vigente }}</code>)</span>
   </div>
   {% if n_anteriores %}
   <p class="field-hint" style="margin-top:0;">
     <span class="num">{{ n_anteriores }}</span> {{ 'análisis de modelos anteriores no se cuenta' if n_anteriores == 1 else 'análisis de modelos anteriores no se cuentan' }}
-    en los totales ni en la actividad por usuario. Siguen en las exportaciones CSV.
+    en los totales ni en la actividad por usuario. Se incluyen en las exportaciones CSV.
   </p>
   {% endif %}
   <div class="figs">
@@ -34,10 +34,10 @@
     </div>
     <div class="fig">
       <span class="fig-v">{{ global.anormales }}</span>
-      <span class="fig-l">Con hallazgo</span>
+      <span class="fig-l">Con hallazgos</span>
       <span class="fig-n">{% if global.anormal.total %}{{ m.tasa_celda(global.anormal) }} del total{% endif %}</span>
     </div>
-    {{ m.tasa_fig(global.acuerdo, 'Acuerdo médico e IA', 'opiniones registradas') }}
+    {{ m.tasa_fig(global.acuerdo, 'Concordancia entre lectura médica y sistema', 'opiniones registradas') }}
     <div class="fig">
       <span class="fig-v">{{ global.desacuerdos }}</span>
       <span class="fig-l">Desacuerdos</span>
@@ -57,9 +57,9 @@
       <tr>
         <th>Usuario</th>
         <th class="num">Análisis</th>
-        <th class="num">% con hallazgo</th>
+        <th class="num">% con hallazgos</th>
         <th class="num">Opiniones</th>
-        <th class="num">% acuerdo</th>
+        <th class="num">% concordancia</th>
         <th>Última actividad</th>
       </tr>
     </thead>
@@ -83,7 +83,7 @@
   </table>
 </div>
 <p class="field-hint" style="margin-top:var(--s-2);">
-  Menos de {{ n_minimo }} casos: se informa el recuento (parte/total), no el porcentaje. Es la misma regla que en Métricas.
+  Con menos de {{ n_minimo }} casos se informa el recuento (parte/total) y no el porcentaje, con el mismo criterio que en Métricas.
 </p>
 </section>
 
@@ -91,14 +91,14 @@
 {% if meta %}
 <section class="metrics-section">
   <div class="metrics-head">
-    <span class="eyebrow">Modelo en producción</span>
-    <span class="metrics-head-note">medido {{ meta.metrics_date }} · test n={{ meta.test_n }}, separado por paciente</span>
+    <span class="eyebrow">Modelo vigente</span>
+    <span class="metrics-head-note">medición del {{ meta.metrics_date }} · conjunto de prueba n={{ meta.test_n }}, separado por paciente</span>
   </div>
   <div class="figs">
     <div class="fig">
       <span class="fig-v">{{ ("%.3f"|format(meta.sensibilidad))|replace('.', ',') }}</span>
       <span class="fig-l">Sensibilidad</span>
-      <span class="fig-n">Nivel imagen, punto de operación real</span>
+      <span class="fig-n">Nivel de imagen, en el umbral de clasificación</span>
     </div>
     <div class="fig">
       <span class="fig-v">{{ ("%.3f"|format(meta.especificidad))|replace('.', ',') }}</span>

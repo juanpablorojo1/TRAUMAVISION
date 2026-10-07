@@ -78,10 +78,18 @@ def apply_clahe_rgb(pil_image: Image.Image) -> Image.Image:
 
 
 def _a_pil(image) -> Image.Image:
-    """Acepta ruta, array BGR de OpenCV o imagen PIL."""
+    """Acepta ruta, array de OpenCV (gris o BGR) o imagen PIL."""
     if isinstance(image, (str, Path)):
-        return Image.open(str(image)).convert("RGB")
+        # Misma lectura que la carga web (16 bits se reescala, no se recorta).
+        from src.preprocessing.transforms import load_image
+
+        placa = load_image(Path(image).read_bytes())
+        if placa is None:
+            raise ValueError(f"No se pudo leer la imagen: {image}")
+        return placa.convert("RGB")
     if isinstance(image, np.ndarray):
+        if image.ndim == 2:
+            return Image.fromarray(cv2.cvtColor(image, cv2.COLOR_GRAY2RGB))
         return Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     return image.convert("RGB")
 
@@ -141,7 +149,7 @@ class FractureDetector:
         if not path.exists():
             raise FileNotFoundError(
                 f"Modelo no encontrado: {path}\n"
-                "Verificá YOLO_MODEL_MUNECA en .env o que el checkpoint esté en disco."
+                "Verifique YOLO_MODEL_MUNECA en .env y que el archivo de pesos esté en disco."
             )
 
         self.model = YOLO(str(path))
@@ -192,14 +200,14 @@ class FractureDetector:
         )
 
     def _draw_boxes(self, img: np.ndarray, boxes: List[DetectionBox]) -> np.ndarray:
-        """Rojo sólido = hallazgo; ámbar punteado = baja confianza."""
+        """Rojo sólido = hallazgo; ámbar punteado = bajo el umbral de clasificación."""
         out = img.copy()
         for b in boxes:
             if b.confidence >= self.abnormal_threshold:
-                color, etiqueta = ROJO, f"Hallazgo {b.confidence:.2f}"
+                color, etiqueta = ROJO, f"Hallazgo {_coma(b.confidence)}"
                 cv2.rectangle(out, (b.x1, b.y1), (b.x2, b.y2), color, 2)
             else:
-                color, etiqueta = AMBAR, f"Baja conf. {b.confidence:.2f}"
+                color, etiqueta = AMBAR, f"Bajo umbral {_coma(b.confidence)}"
                 _rectangulo_punteado(out, (b.x1, b.y1), (b.x2, b.y2), color, 1)
 
             (tw, th), _ = cv2.getTextSize(etiqueta, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
@@ -231,9 +239,9 @@ class FractureDetector:
             f"({result.model_version}), preprocesamiento "
             f"{'CLAHE' if result.clahe_applied else 'sin realce'}, "
             f"en {result.inference_time_ms:.0f} ms.",
-            f"Umbral de señalización: {_coma(self.confidence_threshold)} · "
-            f"umbral de anormalidad: {_coma(self.abnormal_threshold)} "
-            "(score del detector, escala 0-1).",
+            f"Umbral de visualización: {_coma(self.confidence_threshold)} · "
+            f"umbral de clasificación: {_coma(self.abnormal_threshold)} "
+            "(puntaje del detector, escala 0-1).",
             "",
         ]
 
@@ -243,7 +251,7 @@ class FractureDetector:
         if not result.boxes:
             lineas.append(
                 "No se identifican imágenes compatibles con trazo de fractura "
-                "por encima del umbral de señalización."
+                "con puntaje igual o superior al umbral de visualización."
             )
             return lineas
 
@@ -252,15 +260,15 @@ class FractureDetector:
                 f"{i}. Imagen compatible con trazo de fractura, "
                 f"{_tamano_relativo(b, ancho, alto)}, en el "
                 f"{_ubicacion_en_imagen(b, ancho, alto)} "
-                f"(seguridad del detector: {_coma(b.confidence)})."
+                f"(puntaje del detector: {_coma(b.confidence)})."
             )
         bajas = result.low_confidence_boxes
         if bajas:
             lineas.append("")
             lineas.append(
-                f"Se señalan además {len(bajas)} región(es) de baja confianza "
-                "(línea punteada), como referencia para correlación clínica; "
-                "no constituyen hallazgo positivo:"
+                f"Se señalan además {len(bajas)} región(es) con puntaje inferior al "
+                "umbral de clasificación (caja delimitadora punteada), como referencia "
+                "para la correlación clínica; no constituyen hallazgos:"
             )
             for b in bajas:
                 lineas.append(
@@ -273,16 +281,17 @@ class FractureDetector:
         if result.is_abnormal:
             veredicto = (
                 f"Estudio CON HALLAZGOS: {len(result.significant_boxes)} imagen(es) "
-                "compatible(s) con fractura que superan el umbral de anormalidad."
+                "compatible(s) con fractura con puntaje igual o superior al umbral "
+                "de clasificación."
             )
         else:
-            veredicto = "Estudio SIN HALLAZGOS por encima del umbral de anormalidad."
+            veredicto = "Estudio SIN HALLAZGOS que alcancen el umbral de clasificación."
         return [
             "",
             "IMPRESIÓN",
             veredicto,
-            "Nota: la confianza informada es el score interno del detector, "
-            "no una probabilidad de fractura.",
+            "Nota: el puntaje informado es la salida interna del detector y no "
+            "constituye una probabilidad de fractura.",
         ]
 
     def _limitaciones(self) -> list:
@@ -299,7 +308,7 @@ class FractureDetector:
             "muñeca pediátrica; no tipifica el trazo ni identifica el hueso "
             f"comprometido. Un resultado sin hallazgos no descarta patología{medida}",
             "",
-            "AVISO LEGAL: informe generado por un sistema de soporte a la "
-            "decisión clínica. Debe ser interpretado, validado y firmado por "
-            "un médico matriculado.",
+            "AVISO LEGAL: informe generado automáticamente por un prototipo académico "
+            "de soporte a la decisión clínica. No constituye un diagnóstico; debe ser "
+            "interpretado, validado y firmado por un médico matriculado.",
         ]

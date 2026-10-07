@@ -69,7 +69,7 @@ async def login_submit(
     if not check_and_consume(f"login:{ip}", _MAX_INTENTOS_POR_HORA):
         return _pagina_login(
             request, status_code=429,
-            next=next, error="Demasiados intentos fallidos. Esperá unos minutos.",
+            next=next, error="Demasiados intentos fallidos. Espere unos minutos antes de volver a intentarlo.",
         )
 
     user = crud.authenticate_user(db, email, password)
@@ -77,7 +77,7 @@ async def login_submit(
         # El mismo mensaje para email inexistente y contraseña mala: no revela qué cuentas existen.
         return _pagina_login(
             request, status_code=401,
-            next=next, error="Email o contraseña incorrectos.", email=email,
+            next=next, error="Correo electrónico o contraseña incorrectos.", email=email,
         )
 
     login_user(request, user)

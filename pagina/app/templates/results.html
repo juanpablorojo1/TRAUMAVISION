@@ -24,7 +24,7 @@
     {{ m.verdict_strip(nivel, neutro=sin_prioridad, is_abnormal=is_abnormal) }}
 
     <div class="viewport" data-viewport tabindex="0"
-         aria-label="Radiografía del análisis {{ analysis_id }}. Usá las flechas para desplazar, más y menos para el zoom.">
+         aria-label="Radiografía del análisis {{ analysis_id }}. Utilice las flechas para desplazar la imagen y las teclas más y menos para el zoom.">
       <img class="stage-img stage-img-base" data-stage-base aria-hidden="true" alt=""
            src="/analysis/imagen/{{ original_image }}">
       <img class="stage-img stage-img-top" data-stage-img
@@ -89,7 +89,7 @@
       {{ m.icon('alert') }}
       <div>
         <strong>Modelo anterior.</strong>
-        Análisis hecho con un modelo anterior (<code>{{ model_version or 'sin registrar' }}</code>),
+        Análisis realizado con un modelo anterior (<code>{{ model_version or 'sin registrar' }}</code>),
         que ya no está en uso. No se informa prioridad clínica.
       </div>
     </div>
@@ -115,11 +115,11 @@
     {# Zonas marcadas #}
     <div class="finds">
       <div class="find-head">
-        <h2 class="finds-title">Zonas marcadas</h2>
+        <h2 class="finds-title">Cajas delimitadoras</h2>
         {% if not sin_prioridad %}
         <span class="find-count"><span class="num">{{ significant_boxes|length }}</span> sobre el {{ m.corte_nombre() }}</span>
         {% else %}
-        <span class="find-count"><span class="num">{{ boxes|length }}</span> {{ 'zona' if boxes|length == 1 else 'zonas' }}</span>
+        <span class="find-count"><span class="num">{{ boxes|length }}</span> {{ 'caja' if boxes|length == 1 else 'cajas' }}</span>
         {% endif %}
       </div>
       {{ m.find_unit(corte) }}
@@ -134,8 +134,8 @@
         <kbd>N</kbd> siguiente · <kbd>P</kbd> anterior · <kbd>Esc</kbd> soltar
       </p>
       {% else %}
-      <p class="find-empty">El detector no marcó ninguna zona
-        (mínimo para dibujar: {{ ("%.2f"|format(confidence_threshold))|replace('.', ',') }}).</p>
+      <p class="find-empty">El detector no señaló ninguna región
+        (umbral de visualización: {{ ("%.2f"|format(confidence_threshold))|replace('.', ',') }}).</p>
       {% endif %}
     </div>
 
@@ -149,25 +149,25 @@
       </summary>
       <div class="quiet-body stack">
         <dl class="kv">
-          <dt>Score crudo máximo</dt>
+          <dt>Puntaje máximo del detector</dt>
           <dd>{{ m.conf_display(conf, boxes|length) }}</dd>
-          <dt>Regiones dibujadas</dt>
+          <dt>Cajas delimitadoras</dt>
           <dd>{{ boxes|length }}</dd>
           {% if not sin_prioridad %}
           <dt>Sobre el {{ m.corte_nombre() }}</dt>
           <dd>{{ significant_boxes|length }}</dd>
-          <dt>Baja confianza</dt>
+          <dt>Bajo el {{ m.corte_nombre() }}</dt>
           <dd>{{ low_confidence_boxes|length }}</dd>
-          <dt>Umbral de dibujo</dt>
+          <dt>Umbral de visualización</dt>
           <dd>{{ ("%.2f"|format(confidence_threshold))|replace('.', ',') }}</dd>
-          <dt>Umbral de anormalidad ({{ m.corte_nombre() }})</dt>
+          <dt>Umbral de clasificación</dt>
           <dd>{{ ("%.2f"|format(abnormal_threshold))|replace('.', ',') }}</dd>
           {% endif %}
           <dt>Modelo</dt>
           <dd>{{ model_version or 'sin registrar' }}</dd>
           <dt>Región</dt>
           <dd>{{ region_key or 'sin registrar' }}</dd>
-          <dt>Inferencia</dt>
+          <dt>Tiempo de inferencia</dt>
           <dd>{{ inference_time }} ms</dd>
         </dl>
         {% if informe_oculto %}
@@ -197,12 +197,12 @@
           <div class="field-group">
             <label class="field-label" for="observations">Observaciones</label>
             <textarea name="observations" id="observations" rows="2"
-                      placeholder="Comentarios o correcciones"></textarea>
+                      placeholder="Comentarios u observaciones sobre el resultado"></textarea>
           </div>
           <div class="field-group">
-            <label class="field-label" for="correct_diagnosis">Diagnóstico correcto, si difiere</label>
+            <label class="field-label" for="correct_diagnosis">Diagnóstico según lectura médica (si difiere)</label>
             <input type="text" name="correct_diagnosis" id="correct_diagnosis"
-                   placeholder="Ej: fractura de radio distal no desplazada">
+                   placeholder="Por ejemplo: fractura de radio distal no desplazada">
           </div>
           <div class="feedback-buttons">
             <button type="submit" name="agreed" value="true"  class="btn btn-agree">De acuerdo</button>
@@ -213,42 +213,12 @@
       </div>
     </details>
 
-    {% if mail_mensaje %}
-    <div class="alert {% if mail_estado == 'enviado' %}alert-info{% else %}alert-error{% endif %} mail-aviso" role="status">
-      {{ m.icon('info') }}<div>{{ mail_mensaje }}</div>
-    </div>
-    {% endif %}
-
     <div class="rd-actions">
-      <a href="/analysis/{{ analysis_id }}/pdf" class="btn btn-sm btn-primary">{{ m.icon('file') }} Descargar PDF</a>
-      {% if email_habilitado %}
-      <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('mail-dialogo').showModal()">Enviar por mail</button>
-      {% else %}
-      <button type="button" class="btn btn-sm btn-secondary" disabled
-              title="Para activarlo, completá SMTP_EMAIL y SMTP_PASSWORD en el archivo .env">Enviar por mail</button>
-      {% endif %}
+      <a href="/analysis/{{ analysis_id }}/pdf" class="btn btn-sm btn-primary">{{ m.icon('file') }} Descargar informe PDF</a>
       <a href="/analysis/upload" class="btn btn-sm btn-secondary">{{ m.icon('upload') }} Nuevo análisis</a>
       <a href="/analysis/history" class="btn btn-sm btn-secondary">{{ m.icon('back') }} Historial</a>
     </div>
   </aside>
 </div>
-
-{% if email_habilitado %}
-<dialog id="mail-dialogo" class="mail-dialogo" aria-labelledby="mail-titulo">
-  <form method="post" action="/analysis/{{ analysis_id }}/email">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <h3 id="mail-titulo">Enviar el informe por mail</h3>
-    <p class="field-hint">Se manda el mismo PDF que se descarga, con la imagen del estudio. Revisá la dirección antes de enviar.</p>
-    <div class="field-group">
-      <label class="field-label" for="mail-destino">Mail del destinatario</label>
-      <input type="email" id="mail-destino" name="destino" required autocomplete="email" placeholder="colega@hospital.com">
-    </div>
-    <div class="mail-botones">
-      <button type="button" class="btn btn-secondary" onclick="this.closest('dialog').close()">Cancelar</button>
-      <button type="submit" class="btn btn-primary">Enviar</button>
-    </div>
-  </form>
-</dialog>
-{% endif %}
 
 {% endblock %}

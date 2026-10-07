@@ -4,7 +4,7 @@
 {% block title %}Cargar estudio · {{ app_name }}{% endblock %}
 
 {% block head %}
-<script defer src="/static/js/upload.js?v=6"></script>
+<script defer src="/static/js/upload.js?v=7"></script>
 {% endblock %}
 
 {% block content %}
@@ -36,10 +36,10 @@
 
     <div class="dropzone" data-dropzone data-chosen="chosen-single">
       <div class="dropzone-icon">{{ m.icon('upload') }}</div>
-      <p class="dropzone-text">Arrastrá la radiografía acá, o hacé clic para elegirla</p>
+      <p class="dropzone-text">Arrastre la radiografía a esta área o haga clic para seleccionarla</p>
       <p class="dropzone-hint">JPEG, PNG, BMP, TIFF o DICOM (.dcm) · hasta {{ max_size_mb }} MB</p>
       <input type="file" name="file" id="file-input-single" accept="image/*,.dcm" required
-             aria-label="Elegir la radiografía a analizar">
+             aria-label="Seleccionar la radiografía para analizar">
     </div>
 
     <div class="file-chosen" id="chosen-single">
@@ -67,7 +67,7 @@
               {% if meta.mAP50 is none %}
               <span class="badge badge-caution">Entrenamiento pendiente</span>
               {% else %}
-              <span class="badge badge-quiet">Probado con casos reales</span>
+              <span class="badge badge-quiet">Validación retrospectiva</span>
               {% endif %}
               {% if not meta.available %}
               <span class="badge badge-neutral">No disponible</span>
@@ -80,12 +80,12 @@
 
       <details class="quiet">
         <summary>{{ m.icon('chevron', 'chev') }}
-          <span>¿De dónde salen estos números?</span>
+          <span>Procedencia de las métricas</span>
         </summary>
         <div class="quiet-body stack">
           <p class="field-hint" style="margin-top:0;">
-            El sistema usa un único modelo, entrenado con radiografías de muñeca
-            pediátrica. Fuera de esa región del cuerpo y de ese rango de edad, su
+            El sistema utiliza un único modelo, entrenado con radiografías de muñeca
+            pediátrica. Fuera de esa región anatómica y de ese rango etario, su
             comportamiento no está validado.
           </p>
           {% for key, meta in model_metadata.items() %}
@@ -99,11 +99,11 @@
               <dt>Precisión</dt><dd>{{ ("%.3f"|format(meta.precision))|replace('.', ',') }}</dd>
             </dl>
             <p class="metrics-provenance">
-              Medido sobre el conjunto de prueba ({{ meta.test_n }} radiografías) el {{ meta.metrics_date }}.
-              Son métricas de detección del modelo, no de rendimiento clínico.
+              Medición sobre el conjunto de prueba ({{ meta.test_n }} radiografías) del {{ meta.metrics_date }}.
+              Son métricas de detección por caja delimitadora, no de rendimiento clínico.
             </p>
             {% else %}
-            <p class="metrics-provenance">Todavía sin medición: el modelo no se entrenó.</p>
+            <p class="metrics-provenance">Sin métricas disponibles: el modelo no fue entrenado.</p>
             {% endif %}
           </div>
           {% endfor %}
@@ -124,10 +124,10 @@
 
     <div class="dropzone" data-dropzone data-chosen="chosen-study">
       <div class="dropzone-icon">{{ m.icon('archive') }}</div>
-      <p class="dropzone-text">Arrastrá el ZIP del estudio acá, o hacé clic para elegirlo</p>
+      <p class="dropzone-text">Arrastre el archivo ZIP del estudio a esta área o haga clic para seleccionarlo</p>
       <p class="dropzone-hint">Archivo .zip con los DICOM del estudio · hasta {{ max_zip_mb }} MB</p>
       <input type="file" name="file" id="file-input-study" accept=".zip,application/zip" required
-             aria-label="Elegir el ZIP del estudio">
+             aria-label="Seleccionar el archivo ZIP del estudio">
     </div>
 
     <div class="file-chosen" id="chosen-study">
@@ -142,9 +142,9 @@
     <input type="hidden" name="region" id="region-input-study"
            value="{{ (model_metadata.keys()|list)[0] }}">
     <p class="field-hint" style="margin-bottom:var(--s-4);">
-      Se analiza con el modelo
+      El estudio se analiza con el modelo
       <strong>{{ (model_metadata.values()|list)[0].label }}</strong>.
-      Los equipos de RX exportan los estudios como carpeta comprimida: subí ese ZIP.
+      Cargue la carpeta comprimida (ZIP) con los archivos DICOM del estudio.
     </p>
 
     <button type="submit" class="btn btn-primary">Analizar estudio completo</button>
@@ -152,10 +152,10 @@
 </div>
 
 <div class="info-card">
-  <h3>Cuándo usar cada modo</h3>
+  <h3>Modalidades de carga</h3>
   <ul>
-    <li><strong>Imagen individual:</strong> una placa en JPEG, PNG o DICOM.</li>
-    <li><strong>Estudio completo:</strong> la carpeta comprimida con varios .dcm que descarga del sistema del hospital.</li>
+    <li><strong>Imagen individual:</strong> una radiografía en formato JPEG, PNG, BMP, TIFF o DICOM.</li>
+    <li><strong>Estudio completo:</strong> una carpeta comprimida (ZIP) con varios archivos DICOM (.dcm) de un mismo estudio. Cada proyección se analiza por separado.</li>
   </ul>
 </div>
 
@@ -172,7 +172,7 @@
     </div>
     <p class="progress-title" id="progress-title">Analizando la radiografía</p>
     <p class="progress-detail" id="progress-detail">
-      El modelo tarda unos segundos. No cierres ni recargues esta página.
+      El análisis demora unos segundos. No cierre ni recargue esta página.
     </p>
     <p class="progress-elapsed" aria-live="off">
       <span class="progress-state">En proceso</span> ·

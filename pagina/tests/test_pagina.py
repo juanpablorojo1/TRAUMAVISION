@@ -5,15 +5,19 @@ test_pagina.py — Lo esencial de la página, en un solo archivo.
      escriben modelo/test_interno.py y modelo/test_externo.py.
 3-4. Login (en modo demo, con todas las cuentas) y rutas protegidas.
 5-7. Subir una radiografía, aislamiento entre médicos y PDF.
+     Una PNG de 16 bits se lee como en el entrenamiento; un archivo roto da error.
 8-9. Métricas: sin margen de error y sólo con el modelo vigente.
      La página de alcance muestra los números de MODEL_METADATA.
 10.  Los tests no escriben en app/uploads real.
+11-12. El informe no se envía por correo; los rótulos de prioridad muestran
+     el puntaje del detector en escala 0-1, nunca como porcentaje.
 """
 
 import io
 import json
 from pathlib import Path
 
+import cv2
 import numpy as np
 import pytest
 from PIL import Image
@@ -31,6 +35,14 @@ def png_bytes(lado: int = 128, valor: int = 0) -> bytes:
     buf = io.BytesIO()
     Image.fromarray(np.full((lado, lado, 3), valor, dtype=np.uint8)).save(buf, format="PNG")
     return buf.getvalue()
+
+
+def png_16_bits(alto: int = 256, ancho: int = 256) -> bytes:
+    """PNG de 16 bits en gris con un gradiente de 0 a 65535, como los de GRAZPEDWRI-DX."""
+    gradiente = np.linspace(0, 65535, ancho).astype(np.uint16)
+    ok, buf = cv2.imencode(".png", np.tile(gradiente, (alto, 1)))
+    assert ok
+    return buf.tobytes()
 
 
 def crear_analisis(db_session, user_id: int, **kwargs):
@@ -188,6 +200,53 @@ def test_el_pdf_de_un_analisis_propio_se_genera(auth_client, db_session, users):
     assert r.content.startswith(b"%PDF")
 
 
+def test_una_png_de_16_bits_se_lee_como_en_el_entrenamiento(
+    auth_client, db_session, users, monkeypatch
+):
+    """Se reescala a 8 bits (cv2.imdecode en gris), no se satura en 255 como con Pillow."""
+    from app.database import crud
+    from config.settings import UPLOADS_DIR
+    from src.detection.predict import FractureDetector
+
+    recibidas = []
+    predict_real = FractureDetector.predict
+
+    def predict_espia(self, image):
+        recibidas.append(image)
+        return predict_real(self, image)
+
+    monkeypatch.setattr(FractureDetector, "predict", predict_espia)
+
+    contenido = png_16_bits()
+    r = auth_client.post(
+        "/analysis/upload",
+        files={"file": ("rx16.png", contenido, "image/png")},
+    )
+    assert r.status_code == 303, r.text[:400]
+
+    esperada = cv2.imdecode(np.frombuffer(contenido, np.uint8), cv2.IMREAD_GRAYSCALE)
+    al_detector = np.array(recibidas[-1].convert("L"))
+    assert np.array_equal(al_detector, esperada)
+    assert (al_detector == 255).mean() < 0.05  # con Pillow era casi el 100 %
+    assert al_detector.min() < 10 and al_detector.max() > 245
+
+    # La original guardada (sobre la que se dibujan las cajas) es la misma placa.
+    analisis = crud.get_analyses_by_user(db_session, users["principal"])[0]
+    guardada = np.array(Image.open(UPLOADS_DIR / analisis.original_image_path).convert("L"))
+    assert np.array_equal(guardada, esperada)
+    anotada = Image.open(UPLOADS_DIR / analisis.annotated_image_path)
+    assert anotada.size == (esperada.shape[1], esperada.shape[0])
+
+
+def test_un_archivo_que_no_es_imagen_da_el_error_de_archivo_invalido(auth_client):
+    r = auth_client.post(
+        "/analysis/upload",
+        files={"file": ("rx.png", b"esto no es una imagen", "image/png")},
+    )
+    assert r.status_code == 200
+    assert "el archivo no es una imagen válida o está dañado" in r.text
+
+
 # ─── 8-9. Métricas ───────────────────────────────────────────────────────────
 
 def test_metricas_responde_y_no_muestra_el_margen_de_error(auth_client):
@@ -257,79 +316,37 @@ def test_los_tests_no_escriben_en_los_uploads_reales():
     assert UPLOADS_DIR.resolve() != (BASE_DIR / "app" / "uploads").resolve()
 
 
-# ─── 11-13. Enviar el informe por mail ──────────────────────────────────────
+# ─── 11-12. Sin envío por correo y puntaje en escala 0-1 ────────────────────
 
-class ServidorDeMentira:
-    """Reemplaza al servidor de correo: guarda lo que recibe en vez de mandarlo."""
-
-    enviados = []
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        return False
-
-    def starttls(self, context=None):
-        pass
-
-    def login(self, usuario, clave):
-        pass
-
-    def send_message(self, mensaje):
-        ServidorDeMentira.enviados.append(mensaje)
-
-
-@pytest.fixture
-def mail_configurado(monkeypatch):
-    import app.routes.analysis_routes as rutas
-    import app.services.email_service as servicio
-    from app.services import rate_limit
-
-    monkeypatch.setattr(rutas, "EMAIL_HABILITADO", True)
-    monkeypatch.setattr(servicio, "SMTP_EMAIL", "traumavision@ejemplo.com")
-    monkeypatch.setattr(servicio, "SMTP_PASSWORD", "clave-de-prueba")
-    monkeypatch.setattr(servicio.smtplib, "SMTP", ServidorDeMentira)
-    ServidorDeMentira.enviados = []
-    rate_limit.reset()
-    return ServidorDeMentira.enviados
-
-
-def test_enviar_por_mail_manda_el_pdf_adjunto(auth_client, db_session, users, mail_configurado):
+def test_el_informe_no_se_envia_por_correo(auth_client, db_session, users):
     a = crear_analisis(db_session, users["principal"])
-    guardar_imagenes_de(a)
 
-    r = auth_client.post(f"/analysis/{a.id}/email", data={"destino": "colega@hospital.com"}, follow_redirects=False)
-    assert r.status_code == 303 and r.headers["location"].endswith("?mail=enviado")
-    assert len(mail_configurado) == 1
-    mensaje = mail_configurado[0]
-    assert mensaje["To"] == "colega@hospital.com"
-    adjunto = next(mensaje.iter_attachments())
-    assert adjunto.get_content_type() == "application/pdf"
-    assert adjunto.get_content().startswith(b"%PDF")
-    assert "Informe enviado por mail" in auth_client.get(r.headers["location"]).text
+    r = auth_client.post(f"/analysis/{a.id}/email", data={"destino": "colega@hospital.com"})
+    assert r.status_code in (404, 405)
 
-
-def test_no_se_puede_mandar_por_mail_el_analisis_de_otro_ni_a_un_mail_invalido(
-    auth_client, db_session, users, mail_configurado
-):
-    ajeno = crear_analisis(db_session, users["otro"])
-    assert auth_client.post(f"/analysis/{ajeno.id}/email", data={"destino": "a@b.com"}).status_code == 404
-
-    propio = crear_analisis(db_session, users["principal"])
-    r = auth_client.post(f"/analysis/{propio.id}/email", data={"destino": "no-es-un-mail"}, follow_redirects=False)
-    assert r.headers["location"].endswith("?mail=invalido")
-    assert mail_configurado == []
-
-
-def test_sin_smtp_configurado_el_boton_aparece_desactivado(auth_client, db_session, users, monkeypatch):
-    import app.routes.analysis_routes as rutas
-
-    monkeypatch.setattr(rutas, "EMAIL_HABILITADO", False)
-    a = crear_analisis(db_session, users["principal"])
     html = auth_client.get(f"/analysis/{a.id}/results").text
-    assert "Enviar por mail" in html and "disabled" in html
-    assert 'id="mail-dialogo"' not in html
+    assert "Descargar informe PDF" in html
+    for rastro in ("Enviar por mail", "mail-dialogo", "/email", "SMTP"):
+        assert rastro not in html, rastro
+
+
+def test_los_rotulos_de_prioridad_muestran_el_puntaje_en_escala_0_a_1():
+    from app.services.routing_service import urgency_detail
+    from config.settings import ABNORMAL_THRESHOLD, CONFIDENCE_THRESHOLD, URGENCY_HIGH_THRESHOLD
+
+    coma = lambda x: f"{x:.2f}".replace(".", ",")  # noqa: E731
+    alto = (URGENCY_HIGH_THRESHOLD + 1) / 2
+    medio = (ABNORMAL_THRESHOLD + URGENCY_HIGH_THRESHOLD) / 2
+    limite = (CONFIDENCE_THRESHOLD + ABNORMAL_THRESHOLD) / 2
+    bajo = CONFIDENCE_THRESHOLD / 2
+
+    niveles = [urgency_detail(alto, True), urgency_detail(medio, True),
+               urgency_detail(limite, False), urgency_detail(bajo, False), urgency_detail(0.0, False)]
+    assert [n["nivel"] for n in niveles] == ["HIGH", "MEDIUM", "LOW_BORDERLINE", "LOW", "LOW"]
+    assert niveles[0]["titulo"] == "PRIORITARIO — Puntaje alto del detector; confirmar con lectura médica"
+    for n in niveles:
+        assert "%" not in n["titulo"] + n["detalle"], n
+    assert coma(alto) in niveles[0]["detalle"] and coma(URGENCY_HIGH_THRESHOLD) in niveles[0]["detalle"]
+    assert coma(medio) in niveles[1]["detalle"] and coma(ABNORMAL_THRESHOLD) in niveles[1]["detalle"]
+    assert coma(limite) in niveles[2]["detalle"] and coma(ABNORMAL_THRESHOLD) in niveles[2]["detalle"]
+    assert coma(bajo) in niveles[3]["detalle"]

@@ -37,7 +37,6 @@
    34. Métricas: base
    35. Métricas
    36. Señalamiento hallazgo ↔ caja
-   37. Enviar el informe por mail
 */
 
 /* 1. Fuentes */
@@ -3010,21 +3009,3 @@ select {
   .reader.is-wiping .viewport { transition: none !important; }
   .bx-ping { display: none; }
 }
-
-/* 37. Enviar el informe por mail */
-.mail-aviso { margin-top: var(--s-5); }
-.mail-dialogo {
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-lg);
-  padding: var(--s-6);
-  width: min(440px, calc(100vw - 32px));
-  margin: auto;
-  background: var(--surface-1);
-  color: var(--ink);
-  box-shadow: var(--shadow);
-}
-.mail-dialogo::backdrop { background: rgba(26,16,64,.42); }
-.mail-dialogo h3 { margin: 0 0 var(--s-3); }
-.mail-dialogo .field-hint { margin: 0 0 var(--s-4); }
-.mail-dialogo input[type="email"] { width: 100%; }
-.mail-botones { display: flex; gap: var(--s-3); justify-content: flex-end; margin-top: var(--s-5); }

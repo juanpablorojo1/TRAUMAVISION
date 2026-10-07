@@ -15,7 +15,7 @@
     {% block head %}{% endblock %}
 </head>
 <body>
-    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+    <a class="skip-link" href="#contenido">Ir al contenido principal</a>
     {% set path = request.url.path if request else '' %}
     <nav class="navbar">
         <div class="nav-brand">
@@ -37,7 +37,7 @@
             </span>
             <form action="/logout" method="post" class="nav-logout-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <button type="submit" class="btn btn-sm btn-secondary">Salir</button>
+                <button type="submit" class="btn btn-sm btn-secondary">Cerrar sesión</button>
             </form>
         </div>
         {% endif %}
@@ -51,7 +51,7 @@
         <div class="footer-inner">
             {% if disclaimer %}<p class="disclaimer">{{ disclaimer }}</p>{% endif %}
             <p class="footer-text">
-                {{ app_name }} · Tesis de Ingeniería Biomédica, UNC
+                {{ app_name }} · Prototipo académico · Proyecto Integrador de Ingeniería Biomédica, UNC
                 · <a href="/aviso-legal">Alcance y limitaciones</a>
             </p>
         </div>

@@ -149,7 +149,7 @@ def _tabla_de_datos(fecha_analisis: str, analysis_id: str, doctor_name: str, pat
         ("Fecha del análisis:", fecha_analisis),
         ("ID de análisis:", analysis_id or "N/A"),
         ("Profesional:", doctor_name),
-        ("Identificador paciente:", patient_id),
+        ("Identificador del paciente:", patient_id),
     ]
     tabla = Table(
         [[glifos_seguros(a), glifos_seguros(b)] for a, b in filas],
@@ -185,17 +185,17 @@ def generate_pdf_report(
     elementos = [
         _parrafo(APP_NAME, estilos["titulo"]),
         _parrafo(
-            "Sistema de Soporte a la Decisión Clínica — Detección de Fracturas",
+            "Prototipo académico de soporte a la decisión clínica — Detección de fracturas",
             estilos["subtitulo"],
         ),
         Spacer(1, 20),
         _tabla_de_datos(fecha_analisis, analysis_id, doctor_name, patient_id),
         Spacer(1, 20),
-        _parrafo("<b>Imagen con hallazgos señalizados:</b>", estilos["cuerpo"]),
+        _parrafo("<b>Radiografía con las cajas delimitadoras del detector:</b>", estilos["cuerpo"]),
         Spacer(1, 10),
         RLImage(tmp_path, width=14 * cm, height=14 * cm, kind="proportional"),
         Spacer(1, 15),
-        _parrafo("<b>Hallazgos del Sistema:</b>", estilos["cuerpo"]),
+        _parrafo("<b>Informe del sistema:</b>", estilos["cuerpo"]),
         Spacer(1, 6),
     ]
     elementos += [
@@ -208,7 +208,7 @@ def generate_pdf_report(
         Spacer(1, 30),
         _parrafo("-" * 80, estilos["regla"]),
         _parrafo(LEGAL_DISCLAIMER, estilos["pie"]),
-        _parrafo(f"Generado por {APP_NAME} — impreso el {impreso}", estilos["pie"]),
+        _parrafo(f"Generado por {APP_NAME} — emitido el {impreso}", estilos["pie"]),
     ]
 
     buffer = BytesIO()

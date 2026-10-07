@@ -1,6 +1,6 @@
 {# Macros compartidas de presentación #}
 
-{# Score crudo del detector #}
+{# Puntaje del detector #}
 {%- macro conf_display(conf, n_boxes) -%}
   {%- if not conf or conf <= 0 -%}
     sin detecciones
@@ -55,35 +55,35 @@
 <details class="scope" {{ 'open' if abierto }}>
   <summary>{{ icon('chevron', 'chev') }}{{ icon('info', 'scope-i') }}
     <span>{{ 'Alcance del modelo vigente' if modelo_vigente else 'Alcance clínico y limitaciones' }}</span>
-    <span class="fold-m">Recall <span class="num">{{ ("%.3f"|format(sens))|replace('.', ',') }}</span></span>
+    <span class="fold-m">Sensibilidad <span class="num">{{ ("%.3f"|format(sens))|replace('.', ',') }}</span></span>
   </summary>
   <div class="scope-body">
     <dl class="scope-list">
       {% if modelo_vigente %}
-      <dt>De qué modelo son estas métricas</dt>
-      <dd>Del modelo vigente (<code>{{ modelo_vigente }}</code>), <strong>no del que
-          produjo este resultado</strong>. Ese modelo ya no está en uso.</dd>
+      <dt>Origen de las métricas</dt>
+      <dd>Corresponden al modelo vigente (<code>{{ modelo_vigente }}</code>), <strong>no al
+          que produjo este resultado</strong>, que ya no está en uso.</dd>
       {% endif %}
-      <dt>Qué es este resultado</dt>
-      <dd>Soporte a la decisión, no un diagnóstico. Confirmar con lectura médica
-          y contexto clínico antes de cualquier conducta.</dd>
+      <dt>Naturaleza del resultado</dt>
+      <dd>Soporte a la decisión clínica; no constituye un diagnóstico. Debe confirmarse
+          con lectura médica y contexto clínico antes de cualquier conducta.</dd>
 
-      <dt>Qué se le escapa</dt>
+      <dt>Falsos negativos</dt>
       <dd>Sensibilidad por imagen {{ ("%.1f"|format(sens * 100))|replace('.', ',') }} %:
           alrededor de {{ ((1 - sens) * 100)|round|int }} de cada 100 radiografías
-          con fractura no se marcan.
+          con fractura no son señaladas.
           <strong>Un resultado sin hallazgos no descarta fractura.</strong></dd>
 
       <dt>Dominio validado</dt>
-      <dd>{{ region_label }}. Fuera de ese dominio el resultado no tiene validez.</dd>
+      <dd>{{ region_label }}. Fuera de ese dominio el resultado carece de validez.</dd>
 
-      <dt>Seguridad del detector</dt>
-      <dd>Es el score del detector: ordena bien las detecciones pero
+      <dt>Puntaje del detector («Seguridad»)</dt>
+      <dd>Permite ordenar las detecciones, pero
           <strong>no es una probabilidad de fractura</strong>.</dd>
 
       <dt>Validación</dt>
-      <dd>Interna, separada por paciente. <strong>Sin estudio prospectivo ni
-          multicéntrico.</strong></dd>
+      <dd>Retrospectiva: interna, separada por paciente, y externa (PediURF).
+          <strong>Sin estudio prospectivo.</strong></dd>
     </dl>
   </div>
 </details>
@@ -92,13 +92,13 @@
 {# Salvedad clínica #}
 {%- macro salvedad_texto(is_abnormal) -%}
   {%- if is_abnormal -%}
-    Resultado automatizado. <strong>Confirmar con lectura médica</strong> antes de cualquier conducta.
+    Resultado automatizado. <strong>Debe confirmarse con lectura médica</strong> antes de cualquier conducta.
   {%- else -%}
-    <strong>Un resultado sin hallazgos no descarta fractura.</strong> Ante sospecha clínica, indicar revisión igualmente.
+    <strong>Un resultado sin hallazgos no descarta fractura.</strong> Ante sospecha clínica, corresponde igualmente la lectura médica.
   {%- endif -%}
 {%- endmacro -%}
 
-{%- macro score_no_es_prob() -%}El score de cada hallazgo <strong>no es una probabilidad de fractura</strong>.{%- endmacro -%}
+{%- macro score_no_es_prob() -%}El puntaje del detector <strong>no es una probabilidad de fractura</strong>.{%- endmacro -%}
 
 {# Línea de alcance #}
 {%- macro scope_line(is_abnormal) -%}
@@ -108,19 +108,19 @@
 </p>
 {%- endmacro -%}
 
-{# Umbral de anormalidad y rótulo de hallazgos #}
-{%- macro corte_nombre() -%}corte de aviso{%- endmacro -%}
+{# Umbral de clasificación y rótulo de hallazgos #}
+{%- macro corte_nombre() -%}umbral de clasificación{%- endmacro -%}
 {%- macro corte_pct(umbral) -%}{{ ("%.2f"|format(umbral))|replace('.', ',') }}{%- endmacro -%}
 
 {%- macro find_unit(umbral) -%}
-<p class="find-unit"><strong>Seguridad</strong> del detector en cada zona
-  (<span class="num">0</span>–<span class="num">1</span>):
+<p class="find-unit"><strong>Seguridad</strong>: puntaje del detector para cada caja delimitadora
+  (escala <span class="num">0</span>–<span class="num">1</span>);
   <strong>no es una probabilidad de fractura</strong>.
-  {%- if umbral is not none %} La marca en la barra es el
-  {{ corte_nombre() }}, <span class="num">{{ ("%.2f"|format(umbral))|replace('.', ',') }}</span>.
+  {%- if umbral is not none %} La marca vertical de cada barra indica el
+  {{ corte_nombre() }} (<span class="num">{{ ("%.2f"|format(umbral))|replace('.', ',') }}</span>).
   {%- else %} El {{ corte_nombre() }} del modelo vigente no se aplica a este resultado.
   {%- endif %}
-  <span class="muted">En términos técnicos, el score crudo post-NMS del detector.</span></p>
+  <span class="muted">Corresponde al puntaje de confianza del detector posterior a la supresión de no máximos (NMS).</span></p>
 {%- endmacro -%}
 
 {# Veredicto #}
@@ -134,10 +134,10 @@
 {%- endmacro -%}
 
 {%- macro verdict_sub(nivel, umbral) -%}
-  {%- if nivel == 'HIGH' -%}Revisión radiológica inmediata. Por encima del corte de prioridad.
-  {%- elif nivel == 'MEDIUM' -%}Zona marcada sobre el {{ corte_nombre() }} ({{ corte_pct(umbral) }}).
-  {%- elif nivel == 'LOW_BORDERLINE' -%}Zona marcada, por debajo del {{ corte_nombre() }} ({{ corte_pct(umbral) }}). No es despreciable.
-  {%- else -%}Ninguna zona superó el {{ corte_nombre() }} ({{ corte_pct(umbral) }}).
+  {%- if nivel == 'HIGH' -%}Puntaje alto del detector, igual o superior al umbral de prioridad. Debe confirmarse con lectura médica.
+  {%- elif nivel == 'MEDIUM' -%}Caja delimitadora con puntaje igual o superior al {{ corte_nombre() }} ({{ corte_pct(umbral) }}).
+  {%- elif nivel == 'LOW_BORDERLINE' -%}Región señalada con puntaje inferior al {{ corte_nombre() }} ({{ corte_pct(umbral) }}). Se recomienda la correlación clínica.
+  {%- else -%}Ninguna caja delimitadora alcanzó el {{ corte_nombre() }} ({{ corte_pct(umbral) }}).
   {%- endif -%}
 {%- endmacro -%}
 
@@ -183,7 +183,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
   </button>
   <button type="button" class="tool" data-act="compare" aria-pressed="false"
-          title="Comparar con la placa sin marcas — cortina arrastrable (C)"
+          title="Comparar con la radiografía sin marcas mediante una cortina deslizable (C)"
           aria-label="Comparador de cortina">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="1.5"/><path d="M12 4.5v15"/><path d="m8.5 10-2 2 2 2M15.5 10l2 2-2 2"/></svg>
   </button>
@@ -225,8 +225,8 @@
 {%- macro finding_row(i, confidence, umbral) -%}
 <button type="button" class="find {{ 'is-neutral' if umbral is none else ('is-low' if confidence < umbral) }}"
         data-find="{{ i }}" aria-pressed="false"
-        title="Resaltar esta zona sobre la placa · seguridad {{ ("%.3f"|format(confidence))|replace('.', ',') }} (score crudo)"
-        aria-label="Zona marcada {{ i + 1 }}, seguridad {{ ("%.3f"|format(confidence))|replace('.', ',') }}{% if umbral is not none %}, {{ 'por debajo del' if confidence < umbral else 'sobre el' }} {{ corte_nombre() }} de {{ ("%.2f"|format(umbral))|replace('.', ',') }}{% endif %}. Resaltar sobre la placa.">
+        title="Resaltar esta caja sobre la radiografía · puntaje del detector {{ ("%.3f"|format(confidence))|replace('.', ',') }}"
+        aria-label="Caja delimitadora {{ i + 1 }}, puntaje del detector {{ ("%.3f"|format(confidence))|replace('.', ',') }}{% if umbral is not none %}, {{ 'por debajo del' if confidence < umbral else 'igual o superior al' }} {{ corte_nombre() }} de {{ ("%.2f"|format(umbral))|replace('.', ',') }}{% endif %}. Resaltar sobre la radiografía.">
   <span class="find-n">{{ "%02d"|format(i + 1) }}</span>
   <span class="find-v">{{ ("%.3f"|format(confidence))|replace('.', ',') }}</span>
   <span class="find-meter" aria-hidden="true">
@@ -271,7 +271,7 @@
 {%- set faltan = ((1 - sens) * 100)|round|int -%}
 <figure class="waffle">
   <div class="waffle-grid" role="img"
-       aria-label="De cada 100 radiografías con fractura, alrededor de {{ faltan }} no se marcan.">
+       aria-label="De cada 100 radiografías con fractura, alrededor de {{ faltan }} no son señaladas.">
     {%- for i in range(100) -%}
     {%- if i < faltan -%}<span class="wcell is-miss" style="--i: {{ i }};"></span>
     {%- else -%}<span class="wcell"></span>{%- endif -%}
@@ -279,7 +279,7 @@
   </div>
   <figcaption class="waffle-cap">
     <span class="waffle-n">{{ faltan }}<span class="waffle-unit">/100</span></span>
-    <span class="waffle-label">radiografías con fractura que el sistema <strong>no marca</strong></span>
+    <span class="waffle-label">radiografías con fractura que el sistema <strong>no señala</strong></span>
     <span class="waffle-line">Un resultado sin hallazgos no descarta fractura.</span>
   </figcaption>
 </figure>
@@ -307,8 +307,8 @@
   </summary>
   <div class="scope-body">
     <dl class="scope-list">
-      <dt>Cómo se midió</dt>
-      <dd><code>model.val()</code> sobre el split de test: {{ meta.test_n }} imágenes,
+      <dt>Método de medición</dt>
+      <dd><code>model.val()</code> sobre la partición de prueba: {{ meta.test_n }} imágenes,
           {{ meta.test_n_positivos }} con fractura y {{ meta.test_n_negativos }} sin fractura.
           Medición del {{ meta.metrics_date }}.</dd>
 
@@ -322,17 +322,17 @@
       {% endif %}
 
       <dt>Nivel de medición</dt>
-      <dd>Sensibilidad y especificidad están medidas <strong>a nivel imagen, en el punto de operación
-          real</strong>; el recall de detección es por caja.</dd>
+      <dd>La sensibilidad y la especificidad se miden <strong>a nivel de imagen, en el punto de
+          operación (umbral de clasificación)</strong>; el recall de detección se mide por caja delimitadora.</dd>
 
-      <dt>Qué se le escapa</dt>
+      <dt>Falsos negativos</dt>
       <dd>Sensibilidad por imagen {{ ("%.1f"|format(meta.sensibilidad * 100))|replace('.', ',') }} %:
           alrededor de {{ ((1 - meta.sensibilidad) * 100)|round|int }} de cada 100 radiografías
-          con fractura no se marcan.
+          con fractura no son señaladas.
           <strong>Un resultado sin hallazgos no descarta fractura.</strong></dd>
 
       <dt>Dominio validado</dt>
-      <dd>{{ region_label }}. Fuera de ese dominio el resultado no tiene validez.</dd>
+      <dd>{{ region_label }}. Fuera de ese dominio el resultado carece de validez.</dd>
     </dl>
   </div>
 </details>
@@ -344,13 +344,13 @@
   <span class="kpi-cap">{{ rotulo }}</span>
   {%- if t.total == 0 %}
   <span class="kpi-v is-empty">Sin datos</span>
-  <span class="kpi-den">todavía no hay casos en este grupo</span>
+  <span class="kpi-den">aún no hay casos en este grupo</span>
   {%- elif t.suficiente %}
   <span class="kpi-v">{{ (t.tasa * 100)|round|int }}<span class="kpi-unit">&nbsp;%</span></span>
   <span class="kpi-den"><span class="num">{{ t.parte }}</span> de <span class="num">{{ t.total }}</span></span>
   {%- else %}
   <span class="kpi-v"><span class="num">{{ t.parte }}</span><span class="kpi-unit">/{{ t.total }}</span></span>
-  <span class="kpi-den">muestra chica: se informa el recuento, no la tasa</span>
+  <span class="kpi-den">muestra reducida: se informa el recuento, no la tasa</span>
   {%- endif %}
   {%- if nota %}<span class="kpi-note">{{ nota }}</span>{% endif %}
 </div>
@@ -358,23 +358,23 @@
 
 {%- macro cuadrante(c) -%}
 {%- set q = c.cuadrante -%}
-<div class="cuad" role="table" aria-label="Acuerdo entre el sistema y tu lectura, según lo que el sistema marcó.">
+<div class="cuad" role="table" aria-label="Concordancia entre el sistema y la lectura médica, según el resultado del sistema.">
   <div class="cuad-head" role="row">
     <span role="columnheader"></span>
-    <span role="columnheader">Coincidís</span>
-    <span role="columnheader">Discrepás</span>
+    <span role="columnheader">Coincide</span>
+    <span role="columnheader">Discrepa</span>
   </div>
   <div class="cuad-row" role="row">
-    <span class="cuad-k" role="rowheader">El sistema marcó una zona</span>
+    <span class="cuad-k" role="rowheader">Sistema: con hallazgos</span>
     <span class="cuad-c" role="cell"><span class="num">{{ q.marco_ok }}</span></span>
     <span class="cuad-c is-warn" role="cell"><span class="num">{{ q.marco_no }}</span>
-      <span class="cuad-lbl">marcó de más</span></span>
+      <span class="cuad-lbl">posible falso positivo</span></span>
   </div>
   <div class="cuad-row" role="row">
-    <span class="cuad-k" role="rowheader">El sistema no marcó nada</span>
+    <span class="cuad-k" role="rowheader">Sistema: sin hallazgos</span>
     <span class="cuad-c" role="cell"><span class="num">{{ q.limpio_ok }}</span></span>
     <span class="cuad-c is-risk" role="cell"><span class="num">{{ q.limpio_no }}</span>
-      <span class="cuad-lbl">no marcó lo que vos viste</span></span>
+      <span class="cuad-lbl">posible falso negativo</span></span>
   </div>
 </div>
 {%- endmacro -%}
@@ -383,7 +383,7 @@
 <div class="sg-row{{ ' is-thin' if not item.suficiente }}">
   <span class="sg-k">{{ item.etiqueta }}</span>
   <span class="sg-bar" role="img"
-        aria-label="{{ item.etiqueta }}: coincidís en {{ item.parte }} de {{ item.total }} casos revisados.">
+        aria-label="{{ item.etiqueta }}: concordancia en {{ item.parte }} de {{ item.total }} casos revisados.">
     <span class="sg-fill" style="--w: {{ "%.1f"|format(item.tasa * 100) }}%;"></span>
   </span>
   <span class="sg-v">
@@ -409,7 +409,7 @@
   {%- else %}
   <span class="fig-v">{{ t.parte }}<span class="prob-unit">/{{ t.total }}</span></span>
   <span class="fig-l">{{ rotulo }}</span>
-  <span class="fig-n">muestra chica: se informa el recuento, no la tasa</span>
+  <span class="fig-n">muestra reducida: se informa el recuento, no la tasa</span>
   {%- endif %}
 </div>
 {%- endmacro -%}
@@ -420,7 +420,7 @@
 {%- elif t.suficiente -%}
 {{ (t.tasa * 100)|round|int }}&nbsp;%
 {%- else -%}
-<span class="muted" title="Muestra chica: se informa el recuento, no la tasa">{{ t.parte }}/{{ t.total }}</span>
+<span class="muted" title="Muestra reducida: se informa el recuento, no la tasa">{{ t.parte }}/{{ t.total }}</span>
 {%- endif -%}
 {%- endmacro -%}
 

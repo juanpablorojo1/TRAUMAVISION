@@ -13,7 +13,7 @@
 <div class="page-header">
   <div>
     <h1>Alcance y limitaciones</h1>
-    <p class="page-header-sub">Qué hace este sistema, qué no hace y cómo se midió su rendimiento</p>
+    <p class="page-header-sub">Funciones del sistema, limitaciones y método de evaluación del rendimiento</p>
   </div>
 </div>
 
@@ -22,24 +22,25 @@
 </div>
 
 <div class="card">
-  <p class="card-title">Qué hace</p>
+  <p class="card-title">Descripción</p>
   <p>
     {{ app_name }} es un <strong>prototipo académico de soporte a la decisión clínica</strong>,
-    desarrollado como Proyecto Integrador de Ingeniería Biomédica (UNC). Usa un único modelo
+    desarrollado como Proyecto Integrador de Ingeniería Biomédica (UNC). Utiliza un único modelo
     de detección, <code>{{ modelo }}</code> (YOLOv8m, una sola clase: «fractura»), que señala
-    en radiografías de muñeca pediátrica las zonas con patrones compatibles con fractura.
+    mediante cajas delimitadoras las regiones compatibles con fractura en radiografías de
+    muñeca pediátrica.
   </p>
   <p style="margin-top:var(--s-3);">
     Cada proyección se analiza por separado: el modelo no combina las vistas entre sí. En un
-    estudio de varias imágenes, la urgencia del estudio es la de su proyección más urgente.
+    estudio de varias imágenes, el nivel de prioridad del estudio corresponde al de su
+    proyección de mayor prioridad.
     {% if clahe %}Antes del análisis, cada imagen se preprocesa con CLAHE (límite
     {{ coma(clahe.clip, 1) }}, grilla {{ clahe.grilla }}×{{ clahe.grilla }}), igual que en el
     entrenamiento.{% endif %}
   </p>
   <p style="margin-top:var(--s-3);">
-    El resultado se puede descargar como informe PDF y, si el servidor tiene configurado el
-    correo, enviar por mail. No hay una API pública: el sistema se usa sólo desde esta
-    interfaz, con sesión iniciada.
+    El resultado puede descargarse como informe PDF. No existe una API pública: el sistema
+    se utiliza únicamente desde esta interfaz, con sesión iniciada.
   </p>
   <p style="margin-top:var(--s-3);">
     <strong>No emite diagnósticos.</strong> Todo resultado debe ser interpretado, validado
@@ -52,42 +53,43 @@
   <ul class="legal-list">
     <li>
       <strong>Dominio acotado.</strong>
-      El modelo se entrenó con GRAZPEDWRI-DX, partido por paciente: radiografías de
-      <em>muñeca</em> de pacientes de 0 a 19 años. Fuera de esa región y ese rango etario su
-      comportamiento no está validado. Si en la base quedan análisis hechos con un modelo
-      anterior, se muestran marcados como «modelo anterior», sin prioridad clínica, y no
-      entran en las métricas.
+      El modelo se entrenó con GRAZPEDWRI-DX, con partición por paciente: radiografías de
+      <em>muñeca</em> de pacientes de 0 a 19 años. Fuera de esa región y de ese rango etario
+      su comportamiento no está validado. Los análisis realizados con un modelo anterior que
+      permanezcan en la base se muestran marcados como «modelo anterior», sin prioridad
+      clínica, y no se incluyen en las métricas.
     </li>
 
     <li>
       <strong>El puntaje del detector no es una probabilidad.</strong>
-      El número que acompaña a cada zona marcada (la «seguridad» del detector) es su score
-      crudo post-NMS: sirve para ordenar las detecciones, pero no es una probabilidad de
-      fractura. El modelo no se calibró, así que ese número no debe leerse como tal.
+      El número que acompaña a cada caja delimitadora (rotulado «Seguridad») es el puntaje
+      de confianza del detector posterior a la supresión de no máximos (NMS): permite ordenar
+      las detecciones, pero no es una probabilidad de fractura. El modelo no se calibró,
+      por lo que ese número no debe interpretarse como tal.
     </li>
 
     <li>
-      <strong>Los cortes son operativos.</strong>
-      Con un score de {{ coma(umbrales.hallazgo) }} o más la imagen se clasifica con
-      hallazgos («Revisar»); ese corte se eligió sobre la partición de validación. Con
-      {{ coma(umbrales.prioritario) }} o más pasa a «Prioritario». Entre
-      {{ coma(umbrales.caja) }} y {{ coma(umbrales.hallazgo) }} la zona se dibuja con una caja
-      punteada («Límite»), sin clasificar la imagen como anormal. Los cortes ordenan la
-      revisión; no reemplazan el criterio clínico.
+      <strong>Los umbrales son operativos.</strong>
+      Con un puntaje igual o superior a {{ coma(umbrales.hallazgo) }} (umbral de clasificación)
+      la imagen se clasifica con hallazgos («Revisar»); ese umbral se eligió sobre la partición
+      de validación. Con {{ coma(umbrales.prioritario) }} o más se clasifica como «Prioritario».
+      Entre {{ coma(umbrales.caja) }} (umbral de visualización) y {{ coma(umbrales.hallazgo) }}
+      la región se dibuja con una caja delimitadora punteada («Límite»), sin clasificar la
+      imagen como anormal. Los umbrales ordenan la revisión; no reemplazan el criterio clínico.
     </li>
 
     <li>
       <strong>Un negativo no descarta fractura.</strong>
       {% if meta and meta.sensibilidad is not none %}
-      En el test interno, con el corte de {{ coma(umbrales.hallazgo) }}, no se clasificaron con hallazgos
+      En el test interno, con el umbral de clasificación de {{ coma(umbrales.hallazgo) }}, no se clasificaron con hallazgos
       {{ miles(meta.test_FN) }} de las {{ miles(meta.test_n_positivos) }} radiografías con
       fractura (sensibilidad por imagen {{ pct(meta.sensibilidad) }}): alrededor de
-      {{ ((1 - meta.sensibilidad) * 100)|round|int }} de cada 100 radiografías con fractura no se marcaron.
+      {{ ((1 - meta.sensibilidad) * 100)|round|int }} de cada 100 radiografías con fractura no fueron señaladas.
       {% else %}
-      El modelo en uso no tiene métricas publicadas en este sistema, así que esta página no
-      informa ninguna tasa de detección.
+      El modelo en uso no tiene métricas publicadas en este sistema, por lo que esta página
+      no informa ninguna tasa de detección.
       {% endif %}
-      Por eso un resultado sin hallazgos nunca se presenta como un resultado normal confirmado.
+      Por ello, un resultado sin hallazgos nunca se presenta como un resultado normal confirmado.
     </li>
 
     {% if meta and meta.recall is not none %}
@@ -122,13 +124,13 @@
     Las imágenes DICOM se convierten a PNG sin sus metadatos (los datos del paciente no se
     usan ni se guardan), y cada
     imagen se guarda con un nombre aleatorio. En los estudios ZIP, los nombres de las imágenes
-    se guardan con los números largos tapados; el nombre del ZIP se guarda tal como se subió.
-    Cada usuario accede sólo a sus propios estudios. El informe PDF incluye las imágenes: si
-    se manda por mail, sale del sistema.
+    se guardan con las secuencias numéricas largas ocultas; el nombre del ZIP se conserva tal
+    como se cargó. Cada usuario accede únicamente a sus propios estudios. El informe PDF
+    incluye las imágenes: una vez descargado, queda fuera del control del sistema.
   </p>
   <p style="margin-top:var(--s-3);">
-    Aun así, esta es una <strong>instalación de demostración</strong>: no debe utilizarse
-    con estudios de pacientes reales identificables.
+    Se trata de una <strong>instalación de demostración con fines académicos</strong>: no debe
+    utilizarse con estudios de pacientes identificables.
   </p>
 </div>
 

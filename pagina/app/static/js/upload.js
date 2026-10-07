@@ -124,7 +124,7 @@
       formSingle.addEventListener('submit', function () {
         var input = document.getElementById('file-input-single');
         mostrar('Analizando la radiografía',
-                'El modelo tarda unos segundos. No cierres ni recargues esta página.',
+                'El análisis demora unos segundos. No cierre ni recargue esta página.',
                 input && input.files.length ? input.files[0] : null);
       });
     }
@@ -134,7 +134,7 @@
         var input = document.getElementById('file-input-study');
         var n = input && input.files.length ? input.files[0].name : 'el estudio';
         mostrar('Analizando ' + n,
-                'Cada imagen del estudio se procesa por separado. Puede tardar varios minutos.');
+                'Cada imagen del estudio se procesa por separado; el análisis puede demorar varios minutos.');
       });
     }
 

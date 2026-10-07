@@ -1,8 +1,8 @@
 """
 routing_service.py — Elección del modelo y nivel de urgencia.
 
-Valida la región que eligió el médico y traduce el score del detector a un
-nivel de triage. Los cortes son operativos: el score NO es una probabilidad.
+Valida la región que eligió el médico y traduce el puntaje del detector a un
+nivel de prioridad. Los umbrales son operativos: el puntaje NO es una probabilidad.
 """
 
 from pathlib import Path
@@ -19,6 +19,11 @@ from config.settings import (
     URGENCY_MED_THRESHOLD,
     YOLO_MODELS,
 )
+
+
+def _coma(x: float) -> str:
+    """Puntaje con coma decimal y dos decimales (escala 0-1, nunca en %)."""
+    return f"{x:.2f}".replace(".", ",")
 
 
 def route_image(manual_region: str | None) -> tuple[str, str]:
@@ -44,7 +49,7 @@ def route_image(manual_region: str | None) -> tuple[str, str]:
             status_code=503,
             detail=(
                 f"Falta el archivo de pesos de '{region}': {pesos.name}. "
-                "Verificá que el checkpoint esté en disco y que la ruta de .env sea correcta."
+                "Verifique que el archivo de pesos esté en disco y que la ruta configurada en .env sea correcta."
             ),
         )
 
@@ -61,50 +66,63 @@ def calculate_urgency(max_detection_confidence: float) -> str:
 
 
 def urgency_detail(max_detection_confidence: float, is_abnormal: bool) -> dict:
-    """Texto e ícono del nivel de urgencia. Separa el caso límite del negativo limpio."""
+    """Rótulo y clase CSS del nivel de urgencia. Separa el caso límite del negativo limpio.
+
+    El puntaje se informa en escala 0-1 con coma decimal: no es una probabilidad.
+    """
     conf = max_detection_confidence
     nivel = calculate_urgency(conf)
 
     if nivel == "HIGH":
         return {
             "nivel": "HIGH",
-            "titulo": "PRIORITARIO — Revisión radiológica inmediata",
-            "icono": "🔴",
+            "titulo": "PRIORITARIO — Puntaje alto del detector; confirmar con lectura médica",
             "clase": "urgency-high",
-            "detalle": "Hallazgo de alta confianza del detector.",
+            "detalle": (
+                f"Puntaje máximo del detector {_coma(conf)}, igual o superior al "
+                f"umbral de prioridad ({_coma(URGENCY_HIGH_THRESHOLD)})."
+            ),
         }
 
     if nivel == "MEDIUM":
         return {
             "nivel": "MEDIUM",
             "titulo": "REVISAR — Confirmar con lectura médica",
-            "icono": "🟡",
             "clase": "urgency-medium",
-            "detalle": f"Hallazgo por encima del umbral de anormalidad ({ABNORMAL_THRESHOLD:.0%}).",
+            "detalle": (
+                f"Puntaje máximo del detector {_coma(conf)}, igual o superior al "
+                f"umbral de clasificación ({_coma(ABNORMAL_THRESHOLD)})."
+            ),
         }
 
     # Bajo el umbral, pero con una caja dibujada: caso límite.
     if not is_abnormal and conf >= CONFIDENCE_THRESHOLD:
         return {
             "nivel": "LOW_BORDERLINE",
-            "titulo": "LÍMITE — Sin hallazgo confirmado, con región señalada",
-            "icono": "🟠",
+            "titulo": "LÍMITE — Sin hallazgos sobre el umbral de clasificación; región señalada",
             "clase": "urgency-borderline",
             "detalle": (
-                f"La confianza máxima ({conf:.0%}) quedó por debajo "
-                f"del umbral de anormalidad ({ABNORMAL_THRESHOLD:.0%}) pero no es "
-                "despreciable. Correlacionar con la clínica."
+                f"El puntaje máximo del detector ({_coma(conf)}) es inferior al "
+                f"umbral de clasificación ({_coma(ABNORMAL_THRESHOLD)}) e igual o superior "
+                f"al umbral de visualización ({_coma(CONFIDENCE_THRESHOLD)}). "
+                "Se recomienda la correlación clínica."
             ),
         }
 
     if conf > 0:
-        detalle = f"Confianza máxima {conf:.0%}, por debajo del umbral. No descarta patología."
+        detalle = (
+            f"Puntaje máximo del detector {_coma(conf)}, inferior al umbral de "
+            f"clasificación ({_coma(ABNORMAL_THRESHOLD)}). Un resultado sin hallazgos "
+            "no descarta fractura."
+        )
     else:
-        detalle = "El detector no marcó ninguna región. No descarta patología."
+        detalle = (
+            "El detector no señaló ninguna región. Un resultado sin hallazgos "
+            "no descarta fractura."
+        )
     return {
         "nivel": "LOW",
-        "titulo": "SIN HALLAZGOS — Considerar contexto clínico",
-        "icono": "🟢",
+        "titulo": "SIN HALLAZGOS — Considerar el contexto clínico",
         "clase": "urgency-low",
         "detalle": detalle,
     }

@@ -12,7 +12,7 @@
 <div class="page-header">
   <div>
     <h1>Historial</h1>
-    <p class="page-header-sub">Análisis realizados con tu cuenta</p>
+    <p class="page-header-sub">Análisis realizados con esta cuenta</p>
   </div>
   <a href="/analysis/upload" class="btn btn-sm btn-primary">Nuevo análisis</a>
 </div>
@@ -39,7 +39,7 @@
         <th><button type="button" class="th-sort" data-sort="0" data-type="date">Fecha</button></th>
         <th>Clasificación</th>
         <th><button type="button" class="th-sort" data-sort="2" data-type="num"
-                   title="Seguridad máxima del detector en la placa. Término técnico: score crudo post-NMS — no es una probabilidad de fractura.">Seguridad</button></th>
+                   title="Puntaje máximo del detector en la radiografía (escala 0–1, posterior a NMS). No es una probabilidad de fractura.">Seguridad</button></th>
         <th><button type="button" class="th-sort" data-sort="3" data-type="num">Hallazgos</button></th>
         <th>Opinión</th>
         <th><span class="sr-only">Acciones</span></th>
@@ -99,14 +99,14 @@
 {% if recortado %}
 <p class="field-hint" style="margin-top:var(--s-3);">
   Se muestran los {{ total }} análisis más recientes de {{ total_registros }}. Los
-  anteriores siguen guardados y son accesibles por su enlace directo.
+  anteriores se conservan y pueden consultarse mediante su enlace directo.
 </p>
 {% endif %}
 
 {% else %}
 <div class="empty-state">
   {{ m.icon('archive') }}
-  <p>Todavía no hay análisis con esta cuenta.</p>
+  <p>Aún no se registran análisis en esta cuenta.</p>
   <a href="/analysis/upload" class="btn btn-primary">Analizar la primera radiografía</a>
 </div>
 {% endif %}

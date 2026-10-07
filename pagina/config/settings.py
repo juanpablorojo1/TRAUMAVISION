@@ -35,7 +35,7 @@ if not SECRET_KEY or SECRET_KEY == _DEFAULT_SECRET:
     SECRET_KEY = secrets.token_hex(32)
     warnings.warn(
         "SECRET_KEY no definida en .env — se generó una clave efímera. "
-        "Las sesiones se invalidan al reiniciar. Definí SECRET_KEY en .env "
+        "Las sesiones se invalidan al reiniciar. Defina SECRET_KEY en .env "
         "con: python -c \"import secrets; print(secrets.token_hex(32))\"",
         RuntimeWarning,
         stacklevel=2,
@@ -45,15 +45,6 @@ SESSION_COOKIE_NAME = "traumavision_session"
 SESSION_MAX_AGE_SECONDS = int(os.getenv("SESSION_MAX_AGE_SECONDS", str(8 * 3600)))
 # Cookie sólo por HTTPS: true en cualquier despliegue con TLS.
 SESSION_HTTPS_ONLY = os.getenv("SESSION_HTTPS_ONLY", "false").lower() in ("1", "true", "yes")
-
-# --- Envío del informe por mail (opcional) ---
-# Con Gmail, SMTP_PASSWORD es una «contraseña de aplicación». Sin datos, el botón se desactiva.
-SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_EMAIL = os.getenv("SMTP_EMAIL", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-EMAIL_HABILITADO = bool(SMTP_EMAIL and SMTP_PASSWORD)
-EMAIL_POR_HORA = int(os.getenv("EMAIL_POR_HORA", "10"))  # envíos por usuario y por hora
 
 # Orígenes permitidos para CORS. Nunca "*": con cookies el navegador lo rechaza.
 CORS_ORIGINS = [
@@ -186,16 +177,17 @@ MODEL_METADATA: dict = {
     },
 }
 
-REGION_LABELS = {k: f"{v['icon']} {v['label']}" for k, v in MODEL_METADATA.items()}
+REGION_LABELS = {k: v["label"] for k, v in MODEL_METADATA.items()}
 REGION_AVAILABLE = {k: v["available"] for k, v in MODEL_METADATA.items()}
 
 
 # --- Disclaimer legal (se muestra en toda la app) ---
 LEGAL_DISCLAIMER = (
-    "AVISO LEGAL: Este sistema constituye un Sistema de Soporte a la Decisión Clínica (SSDC). "
-    "NO reemplaza el juicio clínico del profesional médico. Los resultados generados son "
-    "sugerencias computacionales que deben ser interpretadas, validadas y aprobadas por un "
-    "médico matriculado. Este software no realiza diagnósticos médicos."
+    "AVISO LEGAL: este sistema es un prototipo académico de Sistema de Soporte a la "
+    "Decisión Clínica (SSDC), destinado a demostración y no apto para estudios de "
+    "pacientes identificables. NO realiza diagnósticos médicos ni reemplaza el juicio "
+    "clínico del profesional. Los resultados generados son sugerencias computacionales "
+    "que deben ser interpretadas, validadas y aprobadas por un médico matriculado."
 )
 
 
@@ -212,10 +204,10 @@ def domain_disclaimer(region=REGION_NO_INDICADA, model_version=REGION_NO_INDICAD
 
     if not meta:  # modelo retirado o sin región registrada
         return (
-            "ALCANCE Y LIMITACIONES: este resultado quedó FUERA DEL DOMINIO VALIDADO. "
+            "ALCANCE Y LIMITACIONES: este resultado se encuentra FUERA DEL DOMINIO VALIDADO. "
             "Se generó con un modelo retirado del sistema o sin región registrada, "
-            "cuyas métricas no son reproducibles. El resultado no debe usarse para ordenar la revisión ni para ninguna "
-            "conducta clínica."
+            "cuyas métricas no son reproducibles. El resultado no debe utilizarse para ordenar "
+            "la revisión ni para fundamentar ninguna conducta clínica."
         )
 
     sens = meta["sensibilidad"]  # por imagen, a τ = ABNORMAL_THRESHOLD
@@ -225,15 +217,15 @@ def domain_disclaimer(region=REGION_NO_INDICADA, model_version=REGION_NO_INDICAD
     # Modelo anterior: se aclara que las métricas son del vigente, no de este análisis.
     if model_version is not REGION_NO_INDICADA and not es_modelo_vigente(model_version):
         return (
-            "ALCANCE Y LIMITACIONES: análisis hecho con un modelo anterior "
+            "ALCANCE Y LIMITACIONES: análisis realizado con un modelo anterior "
             f"({model_version or 'sin registrar'}), que ya no está en uso. "
-            "No se informa prioridad clínica y el resultado no debe usarse para "
+            "No se informa prioridad clínica y el resultado no debe utilizarse para "
             "ordenar la revisión. Las métricas publicadas del sistema corresponden "
             f"al modelo vigente ({MODELO_VIGENTE}) y no a este resultado: sensibilidad "
             f"por imagen {pct(sens)}, medida el {meta['metrics_date']}. "
             "UN INFORME SIN HALLAZGOS NO DESCARTA FRACTURA. "
-            "La confianza que muestra el sistema es el score del detector y no debe "
-            "leerse como probabilidad de fractura."
+            "El puntaje del detector que muestra el sistema no es una probabilidad "
+            "de fractura y no debe interpretarse como tal."
         )
 
     validacion = (
@@ -245,12 +237,12 @@ def domain_disclaimer(region=REGION_NO_INDICADA, model_version=REGION_NO_INDICAD
     return (
         "ALCANCE Y LIMITACIONES: el modelo está validado ÚNICAMENTE sobre "
         f"{meta['label']}, entrenado y evaluado sobre {meta['description']}. "
-        "Fuera de ese dominio este informe no tiene validez. "
+        "Fuera de ese dominio este informe carece de validez. "
         f"Sensibilidad por imagen {pct(sens)}, medida el {meta['metrics_date']} sobre "
-        f"un conjunto de test de {meta['test_n']} imágenes separado por paciente: "
-        f"alrededor de {faltan} de cada 100 radiografías con fractura no se marcan, de modo "
+        f"un conjunto de prueba de {meta['test_n']} imágenes separado por paciente: "
+        f"alrededor de {faltan} de cada 100 radiografías con fractura no son señaladas, de modo "
         "que UN INFORME SIN HALLAZGOS NO DESCARTA FRACTURA. "
-        "La confianza que muestra el sistema es el score del detector y no debe "
-        "leerse como probabilidad de fractura. "
+        "El puntaje del detector que muestra el sistema no es una probabilidad "
+        "de fractura y no debe interpretarse como tal. "
         + validacion
     )

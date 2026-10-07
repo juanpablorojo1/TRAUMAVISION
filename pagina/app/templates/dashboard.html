@@ -15,11 +15,11 @@
 
 <header class="dash-hero">
   <div class="dash-hero-main">
-    <span class="dash-hero-eyebrow">Tu práctica con el sistema</span>
+    <span class="dash-hero-eyebrow">Uso del sistema en esta cuenta</span>
     <h1 class="dash-hero-title">Métricas</h1>
     <p class="dash-hero-sub">
-      Dónde coincidís con el sistema, dónde no, cuánto lo usaste y qué tan
-      bien anda.
+      Concordancia entre la lectura médica y el sistema, volumen de uso y
+      rendimiento del modelo.
     </p>
   </div>
   <div class="dash-hero-side">
@@ -27,7 +27,7 @@
     <div class="dash-hero-prov">
       <span class="dash-hero-model">{{ meta.label }}</span>
       <span class="dash-hero-desc">{{ meta.description }}</span>
-      <span class="dash-hero-date">medido <span class="num">{{ meta.metrics_date }}</span></span>
+      <span class="dash-hero-date">medición del <span class="num">{{ meta.metrics_date }}</span></span>
     </div>
     {% endif %}
     <div class="dash-hero-actions">
@@ -39,12 +39,12 @@
 
 {% if n_anteriores %}
 <p class="field-hint dash-scope">
-  Se cuentan solo los análisis hechos con el modelo vigente
+  Solo se contabilizan los análisis realizados con el modelo vigente
   (<code>{{ modelo_vigente }}</code>).
   {% if n_anteriores == 1 -%}
-  Tu análisis anterior sigue
+  El análisis anterior se conserva
   {%- else -%}
-  Tus <span class="num">{{ n_anteriores }}</span> análisis anteriores siguen
+  Los <span class="num">{{ n_anteriores }}</span> análisis anteriores se conservan
   {%- endif %} en el <a href="/analysis/history">Historial</a>.
 </p>
 {% endif %}
@@ -52,17 +52,17 @@
 <section class="mx" aria-labelledby="ac-t">
   <div class="mx-head">
     <div>
-      <h2 class="mx-title" id="ac-t">Tu acuerdo con el sistema</h2>
+      <h2 class="mx-title" id="ac-t">Concordancia con el sistema</h2>
       <p class="mx-lead">
-        Sale de las opiniones que cargaste al pie de cada informe. Mide
-        <strong>coincidencia</strong>, no acierto: tu lectura no está
-        verificada contra nada, así que un desacuerdo señala dónde mirar, no
-        quién tuvo razón.
+        Se calcula a partir de las opiniones registradas al pie de cada informe.
+        Mide <strong>concordancia</strong>, no exactitud: la lectura médica no se
+        contrasta con un patrón de referencia, por lo que un desacuerdo indica un
+        caso para revisar, no cuál de las dos lecturas es correcta.
       </p>
     </div>
     {% if c.total %}
     <span class="mx-cover">
-      revisaste <span class="num">{{ c.n }}</span> de <span class="num">{{ c.total }}</span>
+      <span class="num">{{ c.n }}</span> de <span class="num">{{ c.total }}</span> revisados
       {%- if c.cobertura.total %} · <span class="num">{{ (c.cobertura.tasa * 100)|round|int }}</span>&nbsp;%{% endif %}
     </span>
     {% endif %}
@@ -70,11 +70,11 @@
 
   {% if c.n == 0 %}
   <div class="mx-empty">
-    <p><strong>Todavía no cargaste ninguna opinión.</strong></p>
-    <p>Al pie de cada informe hay dos botones —«De acuerdo» y «En
-      desacuerdo»— y un campo para el diagnóstico correcto. En cuanto haya
-      opiniones cargadas, acá aparece dónde coincidís con el sistema y dónde
-      no.</p>
+    <p><strong>Aún no se registraron opiniones.</strong></p>
+    <p>Al pie de cada informe se dispone de dos opciones, «De acuerdo» y
+      «En desacuerdo», y de un campo para consignar el diagnóstico según la
+      lectura médica. Cuando existan opiniones registradas, esta sección
+      mostrará la concordancia con el sistema.</p>
     {% if c.total %}
     <a href="/analysis/history" class="btn btn-sm btn-secondary">Ir al historial</a>
     {% endif %}
@@ -83,34 +83,34 @@
 
   <div class="mx-grid">
     <div class="card mx-card mx-quad">
-      <span class="card-title">Cómo se reparten tus revisiones</span>
+      <span class="card-title">Distribución de las revisiones</span>
       {{ m.cuadrante(c) }}
       {% if c.cuadrante.limpio_no %}
       <p class="mx-flag">
         {{ m.icon('alert') }}
         <span><strong>{{ c.cuadrante.limpio_no }}
-          {{ 'vez' if c.cuadrante.limpio_no == 1 else 'veces' }}</strong>
-          marcaste algo donde el sistema no marcó nada. Es el modo de falla
-          que el sistema no puede descartar: un informe sin hallazgos nunca
-          descarta fractura.</span>
+          {{ 'caso' if c.cuadrante.limpio_no == 1 else 'casos' }}</strong>
+          {{ 'en el que' if c.cuadrante.limpio_no == 1 else 'en los que' }} la lectura médica discrepó de un resultado sin hallazgos
+          del sistema. Es el modo de falla más relevante: un informe sin
+          hallazgos no descarta fractura.</span>
       </p>
       {% endif %}
     </div>
 
     <div class="card mx-card mx-kpis">
-      {{ m.tasa_grande(c.general, 'Coincidencia general') }}
-      {{ m.tasa_grande(c.cuando_marco, 'Cuando el sistema marcó una zona',
-                       'de esos casos, cuántos confirmaste') }}
-      {{ m.tasa_grande(c.cuando_no_marco, 'Cuando el sistema no marcó nada',
-                       'de esos casos, cuántos diste por limpios') }}
+      {{ m.tasa_grande(c.general, 'Concordancia global') }}
+      {{ m.tasa_grande(c.cuando_marco, 'Estudios con hallazgos del sistema',
+                       'proporción confirmada por la lectura médica') }}
+      {{ m.tasa_grande(c.cuando_no_marco, 'Estudios sin hallazgos del sistema',
+                       'proporción sin hallazgos según la lectura médica') }}
     </div>
   </div>
 
   <div class="mx-grid mx-grid-2">
     {% if c.por_triage %}
     <div class="card mx-card">
-      <span class="card-title">Acuerdo por veredicto del sistema</span>
-      <p class="mx-note">Qué tan seguido confirmás cada nivel de triage.</p>
+      <span class="card-title">Concordancia por nivel de prioridad</span>
+      <p class="mx-note">Proporción de casos confirmados por la lectura médica en cada nivel.</p>
       <div class="sg-list">
         {% for it in c.por_triage %}{{ m.segmento(it) }}{% endfor %}
       </div>
@@ -119,10 +119,10 @@
 
     {% if c.por_franja %}
     <div class="card mx-card">
-      <span class="card-title">Acuerdo por seguridad del detector</span>
+      <span class="card-title">Concordancia según el puntaje del detector</span>
       <p class="mx-note">
-        La franja del medio es la zona de duda: el sistema marcó algo pero
-        por debajo del corte de aviso
+        La franja intermedia corresponde a regiones señaladas con puntaje
+        inferior al umbral de clasificación
         (<span class="num">{{ ("%.2f"|format(corte_aviso))|replace('.', ',') }}</span>).
       </p>
       <div class="sg-list">
@@ -137,8 +137,8 @@
 <section class="mx" aria-labelledby="pr-t">
   <div class="mx-head">
     <div>
-      <h2 class="mx-title" id="pr-t">Tu práctica</h2>
-      <p class="mx-lead">Describe tu casuística y tu uso, no el rendimiento del modelo.</p>
+      <h2 class="mx-title" id="pr-t">Actividad</h2>
+      <p class="mx-lead">Describe la casuística y el uso del sistema, no el rendimiento del modelo.</p>
     </div>
   </div>
 
@@ -149,7 +149,7 @@
       {{ m.dato(p.en_ventana, '', 'En los últimos ' ~ p.ventana_dias ~ ' días') }}
       {{ m.dato(p.dias_activos, '', 'Días con actividad',
                 (("%.1f"|format(p.por_dia_activo))|replace('.', ',')) ~ ' por día activo') }}
-      {{ m.dato(("%.1f"|format(p.zonas_por_estudio))|replace('.', ','), '', 'Zonas marcadas por estudio',
+      {{ m.dato(("%.1f"|format(p.zonas_por_estudio))|replace('.', ','), '', 'Cajas delimitadoras por estudio',
                 'máximo ' ~ p.zonas_max ~ ' en un estudio') }}
     </div>
 
@@ -160,36 +160,36 @@
     </div>
     {% else %}
     <div class="chart-empty chart-empty-trend">
-      {{ m.icon('chart') }}<span>Sin análisis todavía.</span>
+      {{ m.icon('chart') }}<span>Aún no hay análisis.</span>
     </div>
     {% endif %}
   </div>
 
   <div class="mx-grid mx-grid-2">
     <div class="card mx-card">
-      <span class="card-title">Estudios por veredicto</span>
+      <span class="card-title">Estudios por nivel de prioridad</span>
       {% if p.total %}
       <div class="chart-box chart-box-short"><canvas id="urgencias"></canvas></div>
       {% else %}
-      <div class="chart-empty chart-empty-short">{{ m.icon('chart') }}<span>Sin análisis todavía.</span></div>
+      <div class="chart-empty chart-empty-short">{{ m.icon('chart') }}<span>Aún no hay análisis.</span></div>
       {% endif %}
       <div class="mx-inline">
-        {{ m.prop_bar(p.marcados.parte, p.marcados.total, 'estudios con al menos una zona marcada', 'is-finding') }}
+        {{ m.prop_bar(p.marcados.parte, p.marcados.total, 'estudios con al menos una caja delimitadora', 'is-finding') }}
       </div>
     </div>
 
     <div class="card mx-card">
-      <span class="card-title">Seguridad del detector en tus estudios</span>
+      <span class="card-title">Distribución del puntaje del detector</span>
       {% if p.total %}
       <div class="chart-box"><canvas id="confianzas"></canvas></div>
       {% else %}
-      <div class="chart-empty">{{ m.icon('chart') }}<span>Sin análisis todavía.</span></div>
+      <div class="chart-empty">{{ m.icon('chart') }}<span>Aún no hay análisis.</span></div>
       {% endif %}
       <p class="mx-note">
-        Score crudo de la zona más segura de cada estudio.
-        <strong>No es una probabilidad de fractura.</strong> Por debajo de
-        <span class="num">{{ ("%.2f"|format(umbral_dibujo))|replace('.', ',') }}</span>
-        el sistema no dibuja nada.
+        Puntaje máximo del detector en cada estudio.
+        <strong>No es una probabilidad de fractura.</strong> Por debajo del umbral
+        de visualización (<span class="num">{{ ("%.2f"|format(umbral_dibujo))|replace('.', ',') }}</span>)
+        el sistema no dibuja cajas delimitadoras.
       </p>
     </div>
   </div>
@@ -198,17 +198,17 @@
 <section class="mx" aria-labelledby="sy-t">
   <div class="mx-head">
     <div>
-      <h2 class="mx-title" id="sy-t">Cómo viene andando</h2>
-      <p class="mx-lead">Medido sobre tus análisis, no sobre un banco de pruebas.</p>
+      <h2 class="mx-title" id="sy-t">Desempeño operativo</h2>
+      <p class="mx-lead">Tiempos medidos sobre los análisis de esta cuenta.</p>
     </div>
   </div>
 
   <div class="card mx-card">
     <div class="kpi-row">
-      {{ m.dato(m.segundos(sys.mediana_ms), '', 'Tiempo típico de análisis',
-                'la mitad de tus estudios salió en menos') }}
-      {{ m.dato(m.segundos(sys.p95_ms), '', 'De los más lentos',
-                '19 de cada 20 salieron en menos') }}
+      {{ m.dato(m.segundos(sys.mediana_ms), '', 'Tiempo mediano de análisis',
+                'el 50 % de los estudios se procesó en menos tiempo') }}
+      {{ m.dato(m.segundos(sys.p95_ms), '', 'Percentil 95 del tiempo de análisis',
+                'el 95 % de los estudios se procesó en menos tiempo') }}
       {{ m.dato(sys.n, '', 'Análisis con tiempo medido') }}
     </div>
 
@@ -219,24 +219,24 @@
 <section class="mx" aria-labelledby="ev-t">
   <div class="mx-head">
     <div>
-      <h2 class="mx-title" id="ev-t">Qué tan bien acierta el sistema</h2>
+      <h2 class="mx-title" id="ev-t">Rendimiento del modelo</h2>
       <p class="mx-lead">
-        Medido contra casos ya diagnosticados por un médico, fuera de tu
-        práctica. Esto no cambia con tu uso.
+        Medido sobre conjuntos de prueba con diagnóstico de referencia,
+        independientes de esta cuenta. No varía con el uso del sistema.
       </p>
     </div>
   </div>
 
   <div class="ev-grid">
     <div class="ev-metrics">
-      <span class="ev-card-label">Acierto por imagen</span>
-      {{ m.metric_row('Detecta la fractura cuando existe', meta.sensibilidad, none, 'n ' ~ meta.test_n_positivos) }}
-      {{ m.metric_row('Descarta bien cuando no hay fractura', meta.especificidad, none, 'n ' ~ meta.test_n_negativos) }}
+      <span class="ev-card-label">Rendimiento por imagen</span>
+      {{ m.metric_row('Sensibilidad', meta.sensibilidad, none, 'n ' ~ meta.test_n_positivos) }}
+      {{ m.metric_row('Especificidad', meta.especificidad, none, 'n ' ~ meta.test_n_negativos) }}
       {{ m.metric_axis() }}
     </div>
 
     <div class="ev-waffle">
-      <span class="ev-card-label">Lo que se le escapa</span>
+      <span class="ev-card-label">Falsos negativos</span>
       {{ m.waffle_misses(meta.sensibilidad) }}
     </div>
 
@@ -252,29 +252,28 @@
     <span class="ev-card-label" id="ext-t">Test externo · PediURF</span>
     <p class="ev-ext-ctx">
       Radiografías de antebrazo pediátrico (PediURF) recortadas a la muñeca.
-      Un caso cuenta como positivo si el sistema marca fractura en al menos
-      una de sus vistas. {{ miles(ext.n_casos) }} casos
+      Un caso se considera positivo si el sistema clasifica con hallazgos al
+      menos una de sus proyecciones. {{ miles(ext.n_casos) }} casos
       ({{ miles(pc.TP + pc.FN) }} con fractura distal y
       {{ miles(pc.FP + pc.TN) }} sin fractura en la muñeca),
-      {{ miles(ext.n_imagenes) }} imágenes. Por caso, detecta {{ pct(pc.sensibilidad) }}
-      de los que tienen fractura y descarta {{ pct(pc.especificidad) }} de los
-      que no.
+      {{ miles(ext.n_imagenes) }} imágenes. Por caso: sensibilidad {{ pct(pc.sensibilidad) }}
+      y especificidad {{ pct(pc.especificidad) }}.
     </p>
     <div class="ev-ext-grupo">
       <span class="ev-ext-sub">Por caso</span>
-      {{ m.metric_row('Detecta la fractura cuando existe', pc.sensibilidad, none, 'n ' ~ miles(pc.TP + pc.FN) ~ ' casos') }}
-      {{ m.metric_row('Descarta bien cuando no hay fractura', pc.especificidad, none, 'n ' ~ miles(pc.FP + pc.TN) ~ ' casos') }}
+      {{ m.metric_row('Sensibilidad', pc.sensibilidad, none, 'n ' ~ miles(pc.TP + pc.FN) ~ ' casos') }}
+      {{ m.metric_row('Especificidad', pc.especificidad, none, 'n ' ~ miles(pc.FP + pc.TN) ~ ' casos') }}
     </div>
     <div class="ev-ext-grupo">
       <span class="ev-ext-sub">Por imagen</span>
-      {{ m.metric_row('Detecta la fractura cuando existe', pi.sensibilidad, none, 'n ' ~ miles(pi.TP + pi.FN) ~ ' imágenes') }}
-      {{ m.metric_row('Descarta bien cuando no hay fractura', pi.especificidad, none, 'n ' ~ miles(pi.FP + pi.TN) ~ ' imágenes') }}
+      {{ m.metric_row('Sensibilidad', pi.sensibilidad, none, 'n ' ~ miles(pi.TP + pi.FN) ~ ' imágenes') }}
+      {{ m.metric_row('Especificidad', pi.especificidad, none, 'n ' ~ miles(pi.FP + pi.TN) ~ ' imágenes') }}
     </div>
     {{ m.metric_axis() }}
   </div>
   {% endif %}
 
-  {{ m.alcance_metricas(meta, meta.label, titulo='¿De dónde salen estos números?',
+  {{ m.alcance_metricas(meta, meta.label, titulo='Procedencia de las métricas',
                         validacion_externa=meta.test_externo is defined and meta.test_externo) }}
 </section>
 {% endif %}
@@ -283,7 +282,7 @@
 <details class="quiet dash-fold">
   <summary>
     {{ m.icon('chevron', 'chev') }}
-    <span>Casos donde corregiste al sistema</span>
+    <span>Casos con desacuerdo registrado</span>
     <span class="fold-n">{{ desacuerdos|length }}</span>
     <span class="fold-note">candidatos a reanotación</span>
   </summary>
@@ -294,8 +293,8 @@
           <tr>
             <th>Estudio</th>
             <th>Fecha</th>
-            <th>El sistema dijo</th>
-            <th>Tu diagnóstico</th>
+            <th>Resultado del sistema</th>
+            <th>Diagnóstico registrado</th>
             <th class="sr-only">Acciones</th>
           </tr>
         </thead>
@@ -306,7 +305,7 @@
             <td class="muted">{{ d.fecha.strftime('%d/%m/%Y') }}</td>
             <td>
               {% if d.es_anormal %}
-              <span class="badge badge-finding">Con hallazgo</span>
+              <span class="badge badge-finding">Con hallazgos</span>
               {% else %}
               <span class="badge badge-neutral">Sin hallazgos</span>
               {% endif %}
@@ -326,7 +325,7 @@
   </div>
 </details>
 {% else %}
-<p class="field-hint dash-none">No registraste ningún desacuerdo con el sistema todavía.</p>
+<p class="field-hint dash-none">No se registraron desacuerdos con el sistema.</p>
 {% endif %}
 {% endblock %}
 
@@ -336,7 +335,7 @@
 window.addEventListener('DOMContentLoaded', function () {
   if (typeof Chart === 'undefined') {
     document.querySelectorAll('.chart-box').forEach(function (b) {
-      b.innerHTML = '<div class="chart-empty"><span>No se pudo cargar la librería de gráficos.</span></div>';
+      b.innerHTML = '<div class="chart-empty"><span>No fue posible cargar la biblioteca de gráficos.</span></div>';
     });
     return;
   }

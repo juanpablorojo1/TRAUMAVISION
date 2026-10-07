@@ -113,13 +113,13 @@ def franjas_de_seguridad(umbral_dibujo: float, corte_aviso: float) -> list[dict]
     medio = corte_aviso + (1.0 - corte_aviso) / 2
     return [
         {"clave": "sin_marca", "desde": 0.0, "hasta": umbral_dibujo,
-         "etiqueta": "Sin marca"},
+         "etiqueta": "Sin región señalada"},
         {"clave": "bajo_aviso", "desde": umbral_dibujo, "hasta": corte_aviso,
-         "etiqueta": "Marcó, bajo el corte"},
+         "etiqueta": "Bajo el umbral de clasificación"},
         {"clave": "sobre_aviso", "desde": corte_aviso, "hasta": medio,
-         "etiqueta": "Sobre el corte"},
+         "etiqueta": "Sobre el umbral de clasificación"},
         {"clave": "alta", "desde": medio, "hasta": 1.01,
-         "etiqueta": "Seguridad alta"},
+         "etiqueta": "Puntaje alto"},
     ]
 
 

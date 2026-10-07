@@ -1,5 +1,5 @@
 """
-transforms.py — Lectura de DICOM y extracción de estudios en ZIP.
+transforms.py — Lectura de imágenes (PNG, JPEG, BMP, TIFF y DICOM) y de estudios en ZIP.
 
 El CLAHE de la inferencia está en `src/detection/predict.py`.
 """
@@ -29,6 +29,23 @@ def sanitize_filename(nombre: str) -> str:
     base = re.sub(r"\d{4,}", "…", base)
     base = re.sub(r"[^\w\s.\-…]", "", base, flags=re.UNICODE).strip()
     return base[:60] or "imagen"
+
+
+# ── PNG, JPEG, BMP, TIFF ─────────────────────────────────────────────────────
+
+
+def load_image(contents: bytes) -> Optional[Image.Image]:
+    """Imagen suelta -> PIL en gris de 8 bits, leída igual que en el entrenamiento.
+
+    `datos/grazpedwri/armar_dataset.py` usa `cv2.imread(..., IMREAD_GRAYSCALE)`,
+    que pasa 16 -> 8 bits reescalando. Pillow, en cambio, recorta todo lo que
+    pasa de 255 y una placa de 16 bits queda casi toda blanca.
+    Devuelve None si el archivo no es una imagen que OpenCV pueda leer.
+    """
+    gris = cv2.imdecode(np.frombuffer(contents, np.uint8), cv2.IMREAD_GRAYSCALE)
+    if gris is None:
+        return None
+    return Image.fromarray(gris)
 
 
 # ── DICOM ────────────────────────────────────────────────────────────────────

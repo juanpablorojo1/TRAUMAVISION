@@ -29,7 +29,7 @@
     <input type="hidden" name="next" value="{{ next }}">
 
     <div class="field-group">
-      <label class="field-label" for="email">Email</label>
+      <label class="field-label" for="email">Correo electrónico</label>
       <input type="email" name="email" id="email" required autofocus
              autocomplete="username" value="{{ email|default('') }}"
              placeholder="usuario@traumavision.demo">
@@ -38,18 +38,18 @@
     <div class="field-group">
       <label class="field-label" for="password">Contraseña</label>
       <input type="password" name="password" id="password" required
-             autocomplete="current-password" placeholder="Tu contraseña">
+             autocomplete="current-password" placeholder="Contraseña">
     </div>
 
     <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">Ingresar</button>
   </form>
 
-  <p class="login-note">Acceso para profesionales de la salud.</p>
+  <p class="login-note">Acceso restringido a profesionales de la salud. Prototipo académico de demostración.</p>
 
   {% if demo_mode and demo_users %}
   <details class="demo-panel">
     <summary>{{ m.icon('chevron', 'chev') }} Cuentas de demostración</summary>
-    <p class="demo-note">Cuentas de prueba para la demostración, incluida la de administración. Sólo se muestran en modo demo.</p>
+    <p class="demo-note">Cuentas de prueba para la demostración, incluida la de administración. Solo se muestran en modo de demostración.</p>
     <div class="demo-list">
       {% for u in demo_users %}
       <button type="button" class="demo-row"

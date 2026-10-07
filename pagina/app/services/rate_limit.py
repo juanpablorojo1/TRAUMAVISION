@@ -1,8 +1,8 @@
 """
 rate_limit.py — Límite de usos por hora, en memoria.
 
-Frena la fuerza bruta en el login y el abuso del envío de mails. Se
-reinicia con el proceso: alcanza para un prototipo de un solo worker.
+Frena la fuerza bruta en el login. Se reinicia con el proceso: alcanza
+para un prototipo de un solo worker.
 """
 
 import threading

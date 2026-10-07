@@ -136,24 +136,24 @@ async def security_headers(request: Request, call_next):
 # --- Páginas de error ---
 
 _TITULOS_ERROR = {
-    400: "Pedido inválido",
+    400: "Solicitud inválida",
     401: "Sesión no iniciada",
-    403: "Sin permiso para ver esto",
-    404: "No encontramos esa página",
-    413: "El archivo es demasiado grande",
+    403: "Acceso no autorizado",
+    404: "Página no encontrada",
+    413: "Archivo demasiado grande",
     429: "Demasiados intentos",
     500: "Error interno del sistema",
-    503: "El servicio no está disponible",
+    503: "Servicio no disponible",
 }
 
 _DETALLES_ERROR = {
-    400: "El pedido no se pudo interpretar. Revisá el enlace e intentá de nuevo.",
-    401: "Iniciá sesión para continuar.",
-    403: "Esta cuenta no tiene acceso a ese recurso.",
-    404: "La dirección no existe o el estudio ya no está disponible.",
-    413: "El archivo supera el tamaño permitido.",
-    429: "Esperá unos minutos antes de volver a intentar.",
-    500: "Ocurrió un error inesperado. Si se repite, revisá la consola del servidor.",
+    400: "La solicitud no pudo interpretarse. Verifique el enlace e intente nuevamente.",
+    401: "Inicie sesión para continuar.",
+    403: "Esta cuenta no tiene acceso al recurso solicitado.",
+    404: "La dirección no existe o el recurso solicitado ya no está disponible.",
+    413: "El archivo supera el tamaño máximo permitido.",
+    429: "Espere unos minutos antes de volver a intentarlo.",
+    500: "Se produjo un error inesperado. Si el problema persiste, consulte el registro del servidor.",
     503: "El modelo o el servicio no están disponibles en este momento.",
 }
 
@@ -176,7 +176,7 @@ def _usuario_de_la_sesion(request: Request):
 def _detalle_del_error(exc: HTTPException) -> str:
     if isinstance(exc.detail, str) and exc.detail not in _DETALLES_GENERICOS_EN:
         return exc.detail
-    return _DETALLES_ERROR.get(exc.status_code, "No pudimos completar la operación.")
+    return _DETALLES_ERROR.get(exc.status_code, "No fue posible completar la operación.")
 
 
 # Se registra sobre la clase de Starlette para atrapar también los 404 de rutas inexistentes.
@@ -204,7 +204,7 @@ async def redirect_o_error(request: Request, exc: HTTPException):
             "current_user": user,
             "csrf_token": get_csrf_token(request),
             "status_code": exc.status_code,
-            "titulo": _TITULOS_ERROR.get(exc.status_code, "Algo salió mal"),
+            "titulo": _TITULOS_ERROR.get(exc.status_code, "Error"),
             "detalle": _detalle_del_error(exc),
         },
         status_code=exc.status_code,
